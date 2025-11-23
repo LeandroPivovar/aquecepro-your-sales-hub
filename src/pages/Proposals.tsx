@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ProposalFormModal } from "@/components/modals/ProposalFormModal";
 
 const mockProposals = [
   { id: "001", lead: "Maria Silva", store: "Loja Centro", value: "R$ 12.500,00", status: "pending", seller: "João Santos", date: "2024-01-10" },
@@ -36,6 +37,7 @@ const mockProposals = [
 export default function Proposals() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -44,7 +46,7 @@ export default function Proposals() {
           <h1 className="text-3xl font-bold text-foreground">Propostas</h1>
           <p className="text-muted-foreground">Gerencie todas as propostas comerciais</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
           <Plus className="h-4 w-4" />
           Nova Proposta
         </Button>
@@ -129,6 +131,8 @@ export default function Proposals() {
           </TableBody>
         </Table>
       </div>
+
+      <ProposalFormModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </div>
   );
 }

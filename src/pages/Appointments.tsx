@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Plus } from "lucide-react";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { AppointmentFormModal } from "@/components/modals/AppointmentFormModal";
 
 const mockAppointments = [
   { id: 1, date: "2024-01-15", time: "10:00", client: "Maria Silva", store: "Loja Centro", seller: "João Santos", address: "Rua A, 100", status: "scheduled" },
@@ -12,6 +14,8 @@ const mockAppointments = [
 ];
 
 export default function Appointments() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -19,7 +23,7 @@ export default function Appointments() {
           <h1 className="text-3xl font-bold text-foreground">Agendamentos</h1>
           <p className="text-muted-foreground">Gerencie os agendamentos de visitas</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
           <Plus className="h-4 w-4" />
           Novo Agendamento
         </Button>
@@ -53,6 +57,8 @@ export default function Appointments() {
           </Card>
         ))}
       </div>
+
+      <AppointmentFormModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </div>
   );
 }

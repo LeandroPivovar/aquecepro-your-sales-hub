@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -9,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Edit, Trash2, Store as StoreIcon } from "lucide-react";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { StoreFormModal } from "@/components/modals/StoreFormModal";
 
 const mockStores = [
   { id: 1, name: "Loja Centro", city: "São Paulo", address: "Av. Paulista, 1000", phone: "(11) 3333-4444", manager: "Carlos Silva", products: 45, status: "active" },
@@ -17,6 +19,8 @@ const mockStores = [
 ];
 
 export default function Stores() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -24,7 +28,7 @@ export default function Stores() {
           <h1 className="text-3xl font-bold text-foreground">Lojas</h1>
           <p className="text-muted-foreground">Gerencie as lojas da rede</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
           <Plus className="h-4 w-4" />
           Nova Loja
         </Button>
@@ -78,6 +82,8 @@ export default function Stores() {
           </TableBody>
         </Table>
       </div>
+
+      <StoreFormModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </div>
   );
 }
