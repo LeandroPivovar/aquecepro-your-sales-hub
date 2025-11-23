@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -10,6 +11,7 @@ import {
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { UserFormModal } from "@/components/modals/UserFormModal";
 
 const mockUsers = [
   { id: 1, name: "João Santos", email: "joao.santos@email.com", phone: "(11) 98765-4321", role: "Vendedor", store: "Loja Centro", status: "active" },
@@ -27,6 +29,8 @@ const roleColors: Record<string, string> = {
 };
 
 export default function Users() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -34,7 +38,7 @@ export default function Users() {
           <h1 className="text-3xl font-bold text-foreground">Usuários</h1>
           <p className="text-muted-foreground">Gerencie os usuários do sistema</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
           <Plus className="h-4 w-4" />
           Novo Usuário
         </Button>
@@ -83,6 +87,8 @@ export default function Users() {
           </TableBody>
         </Table>
       </div>
+
+      <UserFormModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </div>
   );
 }

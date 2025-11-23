@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -9,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Edit, Trash2, Thermometer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { CityFormModal } from "@/components/modals/CityFormModal";
 
 const mockCities = [
   { id: 1, name: "São Paulo", state: "SP", avgTemp: "22°C", heatIndex: "Alto", stores: 3 },
@@ -25,6 +27,8 @@ const heatIndexColors: Record<string, string> = {
 };
 
 export default function Cities() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -32,7 +36,7 @@ export default function Cities() {
           <h1 className="text-3xl font-bold text-foreground">Cidades</h1>
           <p className="text-muted-foreground">Gerencie as cidades atendidas</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
           <Plus className="h-4 w-4" />
           Nova Cidade
         </Button>
@@ -84,6 +88,8 @@ export default function Cities() {
           </TableBody>
         </Table>
       </div>
+
+      <CityFormModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -9,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ProductFormModal } from "@/components/modals/ProductFormModal";
 
 const mockProducts = [
   { id: 1, name: "Aquecedor Solar 200L", sku: "AQS-200", category: "Aquecedores Solares", price: "R$ 2.500,00", stores: 3 },
@@ -19,6 +21,8 @@ const mockProducts = [
 ];
 
 export default function Products() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -26,7 +30,7 @@ export default function Products() {
           <h1 className="text-3xl font-bold text-foreground">Produtos</h1>
           <p className="text-muted-foreground">Gerencie o catálogo de produtos</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
           <Plus className="h-4 w-4" />
           Novo Produto
         </Button>
@@ -75,6 +79,8 @@ export default function Products() {
           </TableBody>
         </Table>
       </div>
+
+      <ProductFormModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </div>
   );
 }
