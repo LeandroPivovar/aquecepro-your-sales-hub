@@ -1,5 +1,6 @@
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import aquecepro_logo from "@/assets/aquecepro-logo.png";
 import {
   LayoutDashboard,
   FileText,
@@ -11,7 +12,6 @@ import {
   Calendar,
   Plug,
   UserCircle,
-  Flame,
 } from "lucide-react";
 import {
   Sidebar,
@@ -45,16 +45,12 @@ export function AppSidebar() {
   return (
     <Sidebar className={isCollapsed ? "w-16" : "w-64"} collapsible="icon">
       <SidebarContent>
-        <div className="flex items-center gap-2 px-4 py-6">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-            <Flame className="h-6 w-6 text-primary-foreground" />
-          </div>
-          {!isCollapsed && (
-            <div>
-              <h1 className="text-lg font-bold text-sidebar-foreground">AquecePRO</h1>
-              <p className="text-xs text-sidebar-foreground/70">Gestão Completa</p>
-            </div>
-          )}
+        <div className="flex items-center justify-center px-4 py-6">
+          <img 
+            src={aquecepro_logo} 
+            alt="AquecePRO" 
+            className={isCollapsed ? "h-8 w-8 object-contain" : "h-12 w-auto object-contain"}
+          />
         </div>
 
         <SidebarGroup>
