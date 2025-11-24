@@ -8,44 +8,44 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --background: 21 25% 78%;
+    --foreground: 200 48% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 200 48% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 200 48% 11%;
 
-    --primary: 24 95% 53%;
+    --primary: 24 55% 57%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 91% 60%;
+    --secondary: 199 17% 28%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 21 25% 88%;
+    --muted-foreground: 199 17% 40%;
 
-    --accent: 142 76% 36%;
+    --accent: 24 55% 57%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 24 95% 53%;
+    --border: 21 25% 85%;
+    --input: 21 25% 85%;
+    --ring: 24 55% 57%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 24 95% 53%;
+    --sidebar-background: 200 48% 11%;
+    --sidebar-foreground: 21 25% 88%;
+    --sidebar-primary: 24 55% 57%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 32% 18%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 32% 18%;
-    --sidebar-ring: 24 95% 53%;
+    --sidebar-accent: 199 17% 28%;
+    --sidebar-accent-foreground: 21 25% 88%;
+    --sidebar-border: 199 17% 20%;
+    --sidebar-ring: 24 55% 57%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
@@ -53,47 +53,47 @@ All colors MUST be HSL.
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    --info: 217 91% 60%;
+    --info: 199 17% 28%;
     --info-foreground: 0 0% 100%;
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    --background: 200 48% 11%;
+    --foreground: 21 25% 88%;
 
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 199 17% 16%;
+    --card-foreground: 21 25% 88%;
 
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 199 17% 16%;
+    --popover-foreground: 21 25% 88%;
 
-    --primary: 24 95% 53%;
+    --primary: 24 55% 57%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 91% 60%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 199 17% 28%;
+    --secondary-foreground: 21 25% 88%;
 
-    --muted: 217 32% 18%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 199 17% 20%;
+    --muted-foreground: 21 25% 65%;
 
-    --accent: 142 76% 36%;
+    --accent: 24 55% 57%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 21 25% 88%;
 
-    --border: 217 32% 18%;
-    --input: 217 32% 18%;
-    --ring: 24 95% 53%;
+    --border: 199 17% 20%;
+    --input: 199 17% 20%;
+    --ring: 24 55% 57%;
 
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 24 95% 53%;
+    --sidebar-background: 200 48% 8%;
+    --sidebar-foreground: 21 25% 88%;
+    --sidebar-primary: 24 55% 57%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 32% 15%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 32% 15%;
-    --sidebar-ring: 24 95% 53%;
+    --sidebar-accent: 199 17% 20%;
+    --sidebar-accent-foreground: 21 25% 88%;
+    --sidebar-border: 199 17% 16%;
+    --sidebar-ring: 24 55% 57%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
@@ -101,7 +101,7 @@ All colors MUST be HSL.
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    --info: 217 91% 60%;
+    --info: 199 17% 28%;
     --info-foreground: 0 0% 100%;
   }
 }
@@ -112,6 +112,6 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-unione;
   }
 }
