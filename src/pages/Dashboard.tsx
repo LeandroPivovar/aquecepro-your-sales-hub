@@ -42,11 +42,11 @@ const upcomingAppointments = [
 ];
 
 const topSellers = [
-  { name: "João Santos", proposals: 45, closed: 18, rate: "40%" },
-  { name: "Ana Costa", proposals: 38, closed: 15, rate: "39%" },
-  { name: "Paula Dias", proposals: 32, closed: 11, rate: "34%" },
-  { name: "Roberto Silva", proposals: 28, closed: 8, rate: "29%" },
-  { name: "Carla Mendes", proposals: 25, closed: 7, rate: "28%" },
+  { name: "João Santos", appointments: 52, proposals: 45, closed: 18, rate: "40%" },
+  { name: "Ana Costa", appointments: 44, proposals: 38, closed: 15, rate: "39%" },
+  { name: "Paula Dias", appointments: 38, proposals: 32, closed: 11, rate: "34%" },
+  { name: "Roberto Silva", appointments: 33, proposals: 28, closed: 8, rate: "29%" },
+  { name: "Carla Mendes", appointments: 30, proposals: 25, closed: 7, rate: "28%" },
 ];
 
 export default function Dashboard() {
@@ -124,7 +124,7 @@ export default function Dashboard() {
                     <div>
                       <p className="font-medium">{seller.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {seller.proposals} propostas • {seller.closed} fechadas
+                        {seller.appointments} agendamentos • {seller.proposals} propostas geradas • {seller.closed} fechamentos
                       </p>
                     </div>
                   </div>
