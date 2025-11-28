@@ -24,11 +24,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 const mockCategories = [
-  { id: 1, name: "Aquecedores Solares", description: "Sistemas completos de aquecimento solar", products: 12, status: "active" },
-  { id: 2, name: "Aquecedores a Gás", description: "Aquecedores de passagem e acumulação", products: 8, status: "active" },
-  { id: 3, name: "Coletores", description: "Coletores solares e placas", products: 6, status: "active" },
-  { id: 4, name: "Boilers", description: "Reservatórios térmicos", products: 5, status: "active" },
-  { id: 5, name: "Acessórios", description: "Controladores, sensores e acessórios", products: 14, status: "active" },
+  { id: 1, name: "Aquecedores Solares", segment: "Residencial", description: "Sistemas completos de aquecimento solar", products: 12, status: "active" },
+  { id: 2, name: "Aquecedores a Gás", segment: "Residencial", description: "Aquecedores de passagem e acumulação", products: 8, status: "active" },
+  { id: 3, name: "Coletores", segment: "Comercial", description: "Coletores solares e placas", products: 6, status: "active" },
+  { id: 4, name: "Boilers", segment: "Comercial", description: "Reservatórios térmicos", products: 5, status: "active" },
+  { id: 5, name: "Acessórios", segment: "Residencial", description: "Controladores, sensores e acessórios", products: 14, status: "inactive" },
 ];
 
 export default function Categories() {
@@ -61,9 +61,9 @@ export default function Categories() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Produtos</TableHead>
+              <TableHead>Segmentação</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Produtos</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -71,12 +71,16 @@ export default function Categories() {
             {mockCategories.map((category) => (
               <TableRow key={category.id}>
                 <TableCell className="font-medium">{category.name}</TableCell>
-                <TableCell className="text-muted-foreground">{category.description}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary">{category.products}</Badge>
+                  <Badge variant="outline" className="bg-info/20 text-info border-info/30">
+                    {category.segment}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={category.status as any} />
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary">{category.products}</Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
