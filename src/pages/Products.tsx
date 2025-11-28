@@ -10,14 +10,15 @@ import {
 } from "@/components/ui/table";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { ProductFormModal } from "@/components/modals/ProductFormModal";
 
 const mockProducts = [
-  { id: 1, name: "Aquecedor Solar 200L", sku: "AQS-200", category: "Aquecedores Solares", price: "R$ 2.500,00", stores: 3 },
-  { id: 2, name: "Aquecedor a Gás 15L", sku: "AQG-15", category: "Aquecedores a Gás", price: "R$ 1.200,00", stores: 3 },
-  { id: 3, name: "Coletor Solar Premium", sku: "COL-PRM", category: "Coletores", price: "R$ 800,00", stores: 2 },
-  { id: 4, name: "Boiler Inox 300L", sku: "BOI-300", category: "Boilers", price: "R$ 1.800,00", stores: 3 },
-  { id: 5, name: "Controlador Digital", sku: "CTL-DIG", category: "Acessórios", price: "R$ 350,00", stores: 3 },
+  { id: 1, name: "Aquecedor Solar 200L", sku: "AQS-200", segment: "Residencial", category: "Aquecedores Solares", price: "R$ 2.500,00", status: "active", stores: 3 },
+  { id: 2, name: "Aquecedor a Gás 15L", sku: "AQG-15", segment: "Residencial", category: "Aquecedores a Gás", price: "R$ 1.200,00", status: "active", stores: 3 },
+  { id: 3, name: "Coletor Solar Premium", sku: "COL-PRM", segment: "Comercial", category: "Coletores", price: "R$ 800,00", status: "active", stores: 2 },
+  { id: 4, name: "Boiler Inox 300L", sku: "BOI-300", segment: "Comercial", category: "Boilers", price: "R$ 1.800,00", status: "active", stores: 3 },
+  { id: 5, name: "Controlador Digital", sku: "CTL-DIG", segment: "Residencial", category: "Acessórios", price: "R$ 350,00", status: "inactive", stores: 3 },
 ];
 
 export default function Products() {
@@ -27,7 +28,7 @@ export default function Products() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Produtos</h1>
+          <h1 className="text-3xl font-bold text-foreground">Estoque</h1>
           <p className="text-muted-foreground">Gerencie o catálogo de produtos</p>
         </div>
         <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
@@ -41,9 +42,10 @@ export default function Products() {
           <TableHeader>
             <TableRow>
               <TableHead>Produto</TableHead>
-              <TableHead>SKU</TableHead>
+              <TableHead>Segmentação</TableHead>
               <TableHead>Categoria</TableHead>
               <TableHead>Preço</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Disponível em</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -53,7 +55,9 @@ export default function Products() {
               <TableRow key={product.id}>
                 <TableCell className="font-medium">{product.name}</TableCell>
                 <TableCell>
-                  <code className="rounded bg-muted px-2 py-1 text-xs">{product.sku}</code>
+                  <Badge variant="outline" className="bg-info/20 text-info border-info/30">
+                    {product.segment}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="bg-secondary/20 text-secondary border-secondary/30">
@@ -61,6 +65,9 @@ export default function Products() {
                   </Badge>
                 </TableCell>
                 <TableCell className="font-medium">{product.price}</TableCell>
+                <TableCell>
+                  <StatusBadge status={product.status as any} />
+                </TableCell>
                 <TableCell>
                   <Badge variant="secondary">{product.stores} lojas</Badge>
                 </TableCell>
