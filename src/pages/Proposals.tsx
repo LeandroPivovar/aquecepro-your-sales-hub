@@ -27,11 +27,11 @@ import {
 import { ProposalFormModal } from "@/components/modals/ProposalFormModal";
 
 const mockProposals = [
-  { id: "001", lead: "Maria Silva", store: "Loja Centro", value: "R$ 12.500,00", status: "pending", seller: "João Santos", date: "2024-01-10" },
-  { id: "002", lead: "Carlos Souza", store: "Loja Norte", value: "R$ 8.900,00", status: "approved", seller: "Ana Costa", date: "2024-01-12" },
-  { id: "003", lead: "Pedro Lima", store: "Loja Sul", value: "R$ 15.200,00", status: "scheduled", seller: "João Santos", date: "2024-01-13" },
-  { id: "004", lead: "Juliana Rocha", store: "Loja Centro", value: "R$ 10.800,00", status: "completed", seller: "Paula Dias", date: "2024-01-14" },
-  { id: "005", lead: "Roberto Costa", store: "Loja Norte", value: "R$ 7.500,00", status: "cancelled", seller: "Roberto Silva", date: "2024-01-14" },
+  { id: "001", segment: "Residencial", lead: "Maria Silva", store: "Loja Centro", value: "R$ 12.500,00", status: "pending", seller: "João Santos", date: "2024-01-10" },
+  { id: "002", segment: "Piscina", lead: "Carlos Souza", store: "Loja Norte", value: "R$ 8.900,00", status: "approved", seller: "Ana Costa", date: "2024-01-12" },
+  { id: "003", segment: "Residencial", lead: "Pedro Lima", store: "Loja Sul", value: "R$ 15.200,00", status: "scheduled", seller: "João Santos", date: "2024-01-13" },
+  { id: "004", segment: "Piscina", lead: "Juliana Rocha", store: "Loja Centro", value: "R$ 10.800,00", status: "completed", seller: "Paula Dias", date: "2024-01-14" },
+  { id: "005", segment: "Residencial", lead: "Roberto Costa", store: "Loja Norte", value: "R$ 7.500,00", status: "cancelled", seller: "Roberto Silva", date: "2024-01-14" },
 ];
 
 export default function Proposals() {
@@ -82,6 +82,7 @@ export default function Proposals() {
           <TableHeader>
             <TableRow>
               <TableHead>ID</TableHead>
+              <TableHead>Segmentação</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Loja</TableHead>
               <TableHead>Valor</TableHead>
@@ -95,6 +96,15 @@ export default function Proposals() {
             {mockProposals.map((proposal) => (
               <TableRow key={proposal.id}>
                 <TableCell className="font-medium">#{proposal.id}</TableCell>
+                <TableCell>
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    proposal.segment === "Piscina" 
+                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" 
+                      : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                  }`}>
+                    {proposal.segment}
+                  </span>
+                </TableCell>
                 <TableCell>{proposal.lead}</TableCell>
                 <TableCell>{proposal.store}</TableCell>
                 <TableCell className="font-medium">{proposal.value}</TableCell>

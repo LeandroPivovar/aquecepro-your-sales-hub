@@ -69,7 +69,7 @@ export function AppSidebar() {
                 if ('subItems' in item) {
                   const isAnySubItemActive = item.subItems?.some(sub => location.pathname === sub.url);
                   return (
-                    <Collapsible key={item.title} defaultOpen className="group/collapsible">
+                    <Collapsible key={item.title} className="group/collapsible">
                       <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
                           <SidebarMenuButton className="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-sidebar-accent">

@@ -15,6 +15,19 @@ const mockAppointments = [
 
 export default function Appointments() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<typeof mockAppointments[0] | null>(null);
+
+  const handleEdit = (appointment: typeof mockAppointments[0]) => {
+    setSelectedAppointment(appointment);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = (open: boolean) => {
+    setIsModalOpen(open);
+    if (!open) {
+      setSelectedAppointment(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -50,7 +63,14 @@ export default function Appointments() {
                 <p className="text-muted-foreground">Endereço: <span className="font-medium text-foreground">{appointment.address}</span></p>
               </div>
               <div className="flex gap-2 pt-2">
-                <Button variant="outline" size="sm" className="flex-1">Editar</Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => handleEdit(appointment)}
+                >
+                  Editar
+                </Button>
                 <Button variant="outline" size="sm" className="flex-1">Cancelar</Button>
               </div>
             </CardContent>
@@ -58,7 +78,11 @@ export default function Appointments() {
         ))}
       </div>
 
-      <AppointmentFormModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+      <AppointmentFormModal 
+        open={isModalOpen} 
+        onOpenChange={handleCloseModal}
+        appointment={selectedAppointment}
+      />
     </div>
   );
 }

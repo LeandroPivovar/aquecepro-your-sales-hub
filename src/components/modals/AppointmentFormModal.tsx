@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,16 +20,28 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
+interface Appointment {
+  id: number;
+  date: string;
+  time: string;
+  client: string;
+  store: string;
+  seller: string;
+  address: string;
+  status: string;
+}
+
 interface AppointmentFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  appointment?: Appointment | null;
 }
 
 const mockStores = ["Loja Centro", "Loja Norte", "Loja Sul"];
 const mockSellers = ["João Santos", "Ana Costa", "Paula Dias", "Roberto Silva"];
 const mockLeads = ["Maria Silva", "Carlos Souza", "Pedro Lima", "Juliana Rocha"];
 
-export function AppointmentFormModal({ open, onOpenChange }: AppointmentFormModalProps) {
+export function AppointmentFormModal({ open, onOpenChange, appointment }: AppointmentFormModalProps) {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [store, setStore] = useState("");
@@ -41,8 +53,36 @@ export function AppointmentFormModal({ open, onOpenChange }: AppointmentFormModa
   const [status, setStatus] = useState("scheduled");
   const [channel, setChannel] = useState("google");
 
+  const isEditMode = !!appointment;
+
+  // Preencher formulário quando em modo de edição
+  useEffect(() => {
+    if (appointment) {
+      setDate(appointment.date);
+      setTime(appointment.time);
+      setStore(appointment.store);
+      setSeller(appointment.seller);
+      setLead(appointment.client);
+      setAddress(appointment.address);
+      setStatus(appointment.status);
+    } else {
+      // Resetar formulário quando não estiver editando
+      setDate("");
+      setTime("");
+      setStore("");
+      setSeller("");
+      setLead("");
+      setAddress("");
+      setDuration("60");
+      setStatus("scheduled");
+      setChannel("google");
+      setSellerMode("manual");
+    }
+  }, [appointment]);
+
   const handleSubmit = () => {
     console.log({
+      id: appointment?.id,
       date,
       time,
       store,
@@ -60,9 +100,11 @@ export function AppointmentFormModal({ open, onOpenChange }: AppointmentFormModa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Novo Agendamento</DialogTitle>
+          <DialogTitle>{isEditMode ? "Editar Agendamento" : "Novo Agendamento"}</DialogTitle>
           <DialogDescription>
-            Agende uma visita técnica ou reunião com o cliente
+            {isEditMode 
+              ? "Atualize as informações do agendamento" 
+              : "Agende uma visita técnica ou reunião com o cliente"}
           </DialogDescription>
         </DialogHeader>
 
@@ -215,7 +257,9 @@ export function AppointmentFormModal({ open, onOpenChange }: AppointmentFormModa
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit}>Criar Agendamento</Button>
+          <Button onClick={handleSubmit}>
+            {isEditMode ? "Salvar Alterações" : "Criar Agendamento"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

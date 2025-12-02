@@ -102,6 +102,8 @@ export function UserFormModal({ open, onOpenChange }: UserFormModalProps) {
                 <SelectItem value="Lojista">Lojista</SelectItem>
                 <SelectItem value="Gerente">Gerente</SelectItem>
                 <SelectItem value="Vendedor">Vendedor</SelectItem>
+                <SelectItem value="Cliente">Cliente</SelectItem>
+                <SelectItem value="Lead">Lead</SelectItem>
               </SelectContent>
             </Select>
           </div>
