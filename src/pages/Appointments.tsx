@@ -34,7 +34,7 @@ export default function Appointments() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Agendamentos</h1>
-          <p className="text-muted-foreground">Gerencie os agendamentos de visitas</p>
+          <p className="text-muted-foreground">Gerencie os agendamentos de visitas.</p>
         </div>
         <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
           <Plus className="h-4 w-4" />
