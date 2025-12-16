@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Waves, Home, ArrowRight, ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Waves, Home, Plus, Trash2 } from "lucide-react";
 
 interface ProposalFormModalProps {
   open: boolean;
@@ -76,9 +77,12 @@ interface MachineSelection {
 }
 
 export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps) {
-  // Segmentação e etapas
+  // Segmentação
   const [segment, setSegment] = useState<"piscina" | "residencial" | null>(null);
-  const [step, setStep] = useState(1);
+
+  // Serviços Adicionais
+  const [needsInstallation, setNeedsInstallation] = useState(false);
+  const [needsProject, setNeedsProject] = useState(false);
 
   // Passo 1: Local de Instalação
   const [selectedCity, setSelectedCity] = useState("");
@@ -116,6 +120,33 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
   const [thermalLoad, setThermalLoad] = useState(0);
   const [heatingTime, setHeatingTime] = useState(0);
   const [energyConsumption, setEnergyConsumption] = useState({ initial: 0, daily: 0 });
+
+  // Formulário Residencial
+  const [bathroomFlow, setBathroomFlow] = useState("");
+  const [bathroomFlowCustom, setBathroomFlowCustom] = useState("");
+  const [bathroomTime, setBathroomTime] = useState("");
+  const [bathroomTimeCustom, setBathroomTimeCustom] = useState("");
+  const [bathroomQuantity, setBathroomQuantity] = useState(1);
+
+  const [kitchenFlow, setKitchenFlow] = useState("");
+  const [kitchenFlowCustom, setKitchenFlowCustom] = useState("");
+  const [kitchenTime, setKitchenTime] = useState("");
+  const [kitchenTimeCustom, setKitchenTimeCustom] = useState("");
+  const [kitchenQuantity, setKitchenQuantity] = useState(1);
+
+  const [laundryFlow, setLaundryFlow] = useState("");
+  const [laundryFlowCustom, setLaundryFlowCustom] = useState("");
+  const [laundryTime, setLaundryTime] = useState("");
+  const [laundryTimeCustom, setLaundryTimeCustom] = useState("");
+  const [laundryQuantity, setLaundryQuantity] = useState(1);
+
+  const [bathtubFlow, setBathtubFlow] = useState("");
+  const [bathtubFlowCustom, setBathtubFlowCustom] = useState("");
+  const [bathtubFrequency, setBathtubFrequency] = useState("");
+  const [bathtubFrequencyCustom, setBathtubFrequencyCustom] = useState("");
+  const [bathtubQuantity, setBathtubQuantity] = useState(1);
+
+  const [maxSimultaneousFlow, setMaxSimultaneousFlow] = useState(0);
 
   // Funções de cálculo
   const getWindFactor = (windSpeed: number) => {
@@ -298,9 +329,51 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
     recalculateWithSelectedMachines();
   };
 
+  const calculateMaxSimultaneousFlow = () => {
+    const flows: number[] = [];
+
+    // Banheiros
+    if (bathroomFlow || bathroomFlowCustom) {
+      const flow = bathroomFlow === "custom" ? parseFloat(bathroomFlowCustom) : parseFloat(bathroomFlow);
+      if (!isNaN(flow) && bathroomQuantity > 0) {
+        flows.push(flow * bathroomQuantity);
+      }
+    }
+
+    // Cozinha
+    if (kitchenFlow || kitchenFlowCustom) {
+      const flow = kitchenFlow === "custom" ? parseFloat(kitchenFlowCustom) : parseFloat(kitchenFlow);
+      if (!isNaN(flow) && kitchenQuantity > 0) {
+        flows.push(flow * kitchenQuantity);
+      }
+    }
+
+    // Lavanderia
+    if (laundryFlow || laundryFlowCustom) {
+      const flow = laundryFlow === "custom" ? parseFloat(laundryFlowCustom) : parseFloat(laundryFlow);
+      if (!isNaN(flow) && laundryQuantity > 0) {
+        flows.push(flow * laundryQuantity);
+      }
+    }
+
+    // Banheira
+    if (bathtubFlow || bathtubFlowCustom) {
+      const flow = bathtubFlow === "custom" ? parseFloat(bathtubFlowCustom) : parseFloat(bathtubFlow);
+      if (!isNaN(flow) && bathtubQuantity > 0) {
+        flows.push(flow * bathtubQuantity);
+      }
+    }
+
+    // Vazão máxima simultânea = soma das maiores vazões
+    const totalFlow = flows.reduce((sum, f) => sum + f, 0);
+    setMaxSimultaneousFlow(totalFlow);
+    return totalFlow;
+  };
+
   const resetForm = () => {
     setSegment(null);
-    setStep(1);
+    setNeedsInstallation(false);
+    setNeedsProject(false);
     setSelectedCity("");
     setSelectedMonths([]);
     setUseFrequency("");
@@ -317,23 +390,79 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
     setInfinityLength("");
     setInfinityHeight("");
     setInfinityWidth("");
+    
+    // Reset Residencial
+    setBathroomFlow("");
+    setBathroomFlowCustom("");
+    setBathroomTime("");
+    setBathroomTimeCustom("");
+    setBathroomQuantity(1);
+    setKitchenFlow("");
+    setKitchenFlowCustom("");
+    setKitchenTime("");
+    setKitchenTimeCustom("");
+    setKitchenQuantity(1);
+    setLaundryFlow("");
+    setLaundryFlowCustom("");
+    setLaundryTime("");
+    setLaundryTimeCustom("");
+    setLaundryQuantity(1);
+    setBathtubFlow("");
+    setBathtubFlowCustom("");
+    setBathtubFrequency("");
+    setBathtubFrequencyCustom("");
+    setBathtubQuantity(1);
+    setMaxSimultaneousFlow(0);
   };
 
   const handleSubmit = () => {
+    if (segment === "piscina") {
     console.log({
-      segment,
-      city: selectedCity,
-      months: selectedMonths,
-      useFrequency,
-      desiredTemp,
-      isEnclosed,
-      enclosedArea,
-      poolSurfaceArea,
-      isSuspended,
-      poolAreas,
-      waterfall: hasWaterfall ? { height: waterfallHeight, width: waterfallWidth } : null,
-      infinityEdge: hasInfinityEdge ? { length: infinityLength, height: infinityHeight, width: infinityWidth } : null,
-    });
+        segment,
+        needsInstallation,
+        needsProject,
+        city: selectedCity,
+        months: selectedMonths,
+        useFrequency,
+        desiredTemp,
+        isEnclosed,
+        enclosedArea,
+        poolSurfaceArea,
+        isSuspended,
+        poolAreas,
+        waterfall: hasWaterfall ? { height: waterfallHeight, width: waterfallWidth } : null,
+        infinityEdge: hasInfinityEdge ? { length: infinityLength, height: infinityHeight, width: infinityWidth } : null,
+      });
+    } else if (segment === "residencial") {
+      const maxFlow = calculateMaxSimultaneousFlow();
+      console.log({
+        segment,
+        needsInstallation,
+        needsProject,
+        bathroom: {
+          flow: bathroomFlow === "custom" ? bathroomFlowCustom : bathroomFlow,
+          time: bathroomTime === "custom" ? bathroomTimeCustom : bathroomTime,
+          quantity: bathroomQuantity,
+        },
+        kitchen: {
+          flow: kitchenFlow === "custom" ? kitchenFlowCustom : kitchenFlow,
+          time: kitchenTime === "custom" ? kitchenTimeCustom : kitchenTime,
+          quantity: kitchenQuantity,
+        },
+        laundry: {
+          flow: laundryFlow === "custom" ? laundryFlowCustom : laundryFlow,
+          time: laundryTime === "custom" ? laundryTimeCustom : laundryTime,
+          quantity: laundryQuantity,
+        },
+        bathtub: {
+          flow: bathtubFlow === "custom" ? bathtubFlowCustom : bathtubFlow,
+          frequency: bathtubFrequency === "custom" ? bathtubFrequencyCustom : bathtubFrequency,
+          quantity: bathtubQuantity,
+        },
+        maxSimultaneousFlow: maxFlow,
+        maxSimultaneousFlowPerHour: maxFlow * 60,
+      });
+    }
     resetForm();
     onOpenChange(false);
   };
@@ -342,7 +471,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
   const renderContent = () => {
     // Seleção inicial de segmentação
     if (!segment) {
-      return (
+  return (
         <div className="grid grid-cols-2 gap-6 p-6">
           <Card 
             className="cursor-pointer transition-all hover:scale-105 hover:shadow-lg border-2"
@@ -377,655 +506,938 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
       );
     }
 
-    // Fluxo de Piscina
+    // Fluxo de Piscina - Formulário Unificado
     if (segment === "piscina") {
-      switch (step) {
-        case 1: // Local de Instalação
-          return (
-            <div className="space-y-6 p-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Local de Instalação da Piscina</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Selecione a cidade para buscar dados climáticos (Fonte: NASA)
-                </p>
+      return (
+        <div className="space-y-6 p-6">
+          {/* Seção 0: Serviços Adicionais */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Serviços Adicionais</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Selecione os serviços adicionais necessários
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+                <Checkbox
+                  id="installation"
+                  checked={needsInstallation}
+                  onCheckedChange={(checked) => setNeedsInstallation(checked as boolean)}
+                />
+                <Label htmlFor="installation" className="cursor-pointer font-semibold">
+                  🔧 Serviço de Instalação
+                </Label>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="city">Cidade / Estado *</Label>
-                <Select value={selectedCity} onValueChange={setSelectedCity}>
-                  <SelectTrigger id="city">
-                    <SelectValue placeholder="Selecione a cidade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockCities.map((city) => (
-                      <SelectItem key={`${city.city}-${city.state}`} value={`${city.city}-${city.state}`}>
-                        {city.city} - {city.state}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Dados climáticos incluem: Temperatura média mensal, Velocidade do vento, Radiação solar diária
-                </p>
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
+                <Checkbox
+                  id="project"
+                  checked={needsProject}
+                  onCheckedChange={(checked) => setNeedsProject(checked as boolean)}
+                />
+                <Label htmlFor="project" className="cursor-pointer font-semibold">
+                  📐 Projetos
+                </Label>
               </div>
             </div>
-          );
+          </div>
 
-        case 2: // Meses de Utilização
-          return (
-            <div className="space-y-6 p-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Meses de Utilização</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Selecione os meses em que a piscina será utilizada
-                </p>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {months.map((month) => (
-                  <div key={month} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={month}
-                      checked={selectedMonths.includes(month)}
-                      onCheckedChange={() => toggleMonth(month)}
-                    />
-                    <Label htmlFor={month} className="cursor-pointer font-normal">
-                      {month}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="mt-6 p-4 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
-                <h4 className="font-semibold text-sm mb-3 text-blue-900 dark:text-blue-100">
-                  Dados Climáticos do Período Selecionado
-                </h4>
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <p className="font-medium text-blue-800 dark:text-blue-200">Velocidade do Vento - Fatores de Correção:</p>
-                    <ul className="ml-4 mt-1 space-y-1 text-blue-700 dark:text-blue-300">
-                      <li>• Vento até 18 km/h: <strong>Fator 1,15</strong></li>
-                      <li>• Vento entre 18,1 km/h e 35 km/h: <strong>Fator 1,25</strong></li>
-                      <li>• Vento entre 35,1 km/h e 44 km/h: <strong>Fator 1,80</strong></li>
-                    </ul>
-                    <p className="text-xs mt-2 text-blue-600 dark:text-blue-400">
-                      * Sistema buscará a maior velocidade do vento no período selecionado
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-blue-800 dark:text-blue-200">Temperatura Ambiente:</p>
-                    <p className="text-xs mt-1 text-blue-600 dark:text-blue-400">
-                      * Sistema buscará a menor temperatura no período selecionado para cálculos
-                    </p>
-                  </div>
-                </div>
-              </div>
+          <Separator />
+
+          {/* Seção 1: Local de Instalação */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">1. Local de Instalação</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Selecione a cidade para buscar dados climáticos (Fonte: NASA)
+              </p>
             </div>
-          );
+            <div className="space-y-2">
+              <Label htmlFor="city">Cidade / Estado *</Label>
+              <Select value={selectedCity} onValueChange={setSelectedCity}>
+                <SelectTrigger id="city">
+                  <SelectValue placeholder="Selecione a cidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockCities.map((city) => (
+                    <SelectItem key={`${city.city}-${city.state}`} value={`${city.city}-${city.state}`}>
+                      {city.city} - {city.state}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-2">
+                Dados climáticos incluem: Temperatura média mensal, Velocidade do vento, Radiação solar diária
+              </p>
+            </div>
+            </div>
 
-        case 3: // Configurações de Uso
-          return (
-            <div className="space-y-6 p-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Configurações de Uso</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Defina a frequência e temperatura desejada
-                </p>
-              </div>
+          <Separator />
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="frequency">Frequência de Uso *</Label>
-                  <Select value={useFrequency} onValueChange={setUseFrequency}>
-                    <SelectTrigger id="frequency">
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="diario">
-                        <div className="flex flex-col">
-                          <span className="font-medium">Uso Diário</span>
-                          <span className="text-xs text-muted-foreground">Tempo para primeiro aquecimento: pode ser maior que 65 horas</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="esporadico">
-                        <div className="flex flex-col">
-                          <span className="font-medium">Uso Esporádico</span>
-                          <span className="text-xs text-muted-foreground">Tempo para primeiro aquecimento: pode ser menor que 24 horas</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="temp">Temperatura Desejada (°C) *</Label>
-                  <Input
-                    id="temp"
-                    type="number"
-                    min="20"
-                    max="36"
-                    step="0.5"
-                    placeholder="Ex: 28"
-                    value={desiredTemp}
-                    onChange={(e) => setDesiredTemp(e.target.value)}
+          {/* Seção 2: Meses de Utilização */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">2. Meses de Utilização</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Selecione os meses em que a piscina será utilizada
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {months.map((month) => (
+                <div key={month} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={month}
+                    checked={selectedMonths.includes(month)}
+                    onCheckedChange={() => toggleMonth(month)}
                   />
-                  
-                  <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800">
-                    <p className="text-xs font-semibold text-orange-900 dark:text-orange-100 mb-1">
-                      ⚠️ Limite máximo: 36°C
+                  <Label htmlFor={month} className="cursor-pointer font-normal">
+                    {month}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Seção 3: Configurações de Uso */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">3. Configurações de Uso</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Defina a frequência e temperatura desejada
+              </p>
+            </div>
+
+            <div className="space-y-4">
+            <div className="space-y-2">
+                <Label htmlFor="frequency">Frequência de Uso *</Label>
+                <Select value={useFrequency} onValueChange={setUseFrequency}>
+                  <SelectTrigger id="frequency">
+                    <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="diario">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Uso Diário</span>
+                        <span className="text-xs text-muted-foreground">Tempo para primeiro aquecimento: pode ser maior que 65 horas</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="esporadico">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Uso Esporádico</span>
+                        <span className="text-xs text-muted-foreground">Tempo para primeiro aquecimento: pode ser menor que 24 horas</span>
+                      </div>
+                    </SelectItem>
+                </SelectContent>
+              </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="temp">Temperatura Desejada (°C) *</Label>
+              <Input
+                  id="temp"
+                  type="number"
+                  min="20"
+                  max="36"
+                  step="0.5"
+                  placeholder="Ex: 28"
+                  value={desiredTemp}
+                  onChange={(e) => setDesiredTemp(e.target.value)}
+                />
+                
+                {parseFloat(desiredTemp) > 31 && (
+                  <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800">
+                    <p className="text-xs font-semibold text-red-900 dark:text-red-100">
+                      🔥 Temperatura elevada detectada ({desiredTemp}°C)
                     </p>
-                    <p className="text-xs text-orange-800 dark:text-orange-200">
-                      Para temperaturas acima de 31°C com tempo de aquecimento superior a 55 horas:
-                    </p>
-                    <p className="text-xs font-medium text-orange-900 dark:text-orange-100 mt-1">
-                      Será aplicado fator de perda de 1,15 para cada grau de elevação acima dos 31°C
+                    <p className="text-xs text-red-800 dark:text-red-200 mt-1">
+                      Fator de perda adicional será calculado: {((parseFloat(desiredTemp) - 31) * 0.15).toFixed(2)} 
+                      {' '}({parseFloat(desiredTemp) - 31} graus × 1,15)
                     </p>
                   </div>
-                  
-                  {parseFloat(desiredTemp) > 31 && (
-                    <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800">
-                      <p className="text-xs font-semibold text-red-900 dark:text-red-100">
-                        🔥 Temperatura elevada detectada ({desiredTemp}°C)
-                      </p>
-                      <p className="text-xs text-red-800 dark:text-red-200 mt-1">
-                        Fator de perda adicional será calculado: {((parseFloat(desiredTemp) - 31) * 0.15).toFixed(2)} 
-                        {' '}({parseFloat(desiredTemp) - 31} graus × 1,15)
-                      </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Seção 4: Tipo de Ambiente */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">4. Tipo de Ambiente</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Características do local da piscina
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-4 p-4 rounded-lg border-2 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-950 dark:to-cyan-950">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="enclosed"
+                    checked={isEnclosed}
+                    onCheckedChange={(checked) => setIsEnclosed(checked as boolean)}
+                  />
+                  <Label htmlFor="enclosed" className="cursor-pointer font-semibold">
+                    🏠 Local Fechado
+                  </Label>
                     </div>
-                  )}
+
+                {isEnclosed && (
+                  <div className="ml-6 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="enclosed-area">Área Total do Ambiente (m²) *</Label>
+                      <Input
+                          id="enclosed-area"
+                        type="number"
+                          step="0.01"
+                          placeholder="Ex: 240"
+                          value={enclosedArea}
+                          onChange={(e) => setEnclosedArea(e.target.value)}
+                      />
+                    </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="pool-surface">Área da Superfície da Piscina (m²) *</Label>
+                        <Input
+                          id="pool-surface"
+                          type="number"
+                          step="0.01"
+                          placeholder="Ex: 50"
+                          value={poolSurfaceArea}
+                          onChange={(e) => setPoolSurfaceArea(e.target.value)}
+                        />
+                    </div>
+                    </div>
+
+                    {enclosedArea && poolSurfaceArea && (
+                      <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900 border border-green-300 dark:border-green-700">
+                        <p className="text-xs font-semibold text-green-900 dark:text-green-100">
+                          ✅ Desumidificadores necessários:
+                        </p>
+                        <p className="text-sm font-bold text-green-900 dark:text-green-100 mt-1">
+                          {Math.ceil(Math.max(
+                            parseFloat(poolSurfaceArea) / 50,
+                            parseFloat(enclosedArea) / 240
+                          ))} máquina(s) KODI 120
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 rounded-lg border-2 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="suspended"
+                    checked={isSuspended}
+                    onCheckedChange={(checked) => setIsSuspended(checked as boolean)}
+                  />
+                  <Label htmlFor="suspended" className="cursor-pointer font-semibold">
+                    🏗️ Piscina Suspensa
+                  </Label>
                 </div>
               </div>
             </div>
-          );
+          </div>
 
-        case 4: // Tipo de Ambiente
-          return (
-            <div className="space-y-6 p-6">
+          <Separator />
+
+          {/* Seção 5: Dimensões das Áreas */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold mb-2">Tipo de Ambiente</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Características do local da piscina
+                <h3 className="text-lg font-semibold mb-2">5. Dimensões da Piscina</h3>
+                <p className="text-sm text-muted-foreground">
+                  Adicione as áreas da piscina (rasa, profunda, etc.)
                 </p>
               </div>
-
-              <div className="space-y-4">
-                <div className="space-y-4 p-4 rounded-lg border-2 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-950 dark:to-cyan-950">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="enclosed"
-                      checked={isEnclosed}
-                      onCheckedChange={(checked) => setIsEnclosed(checked as boolean)}
-                    />
-                    <Label htmlFor="enclosed" className="cursor-pointer font-semibold">
-                      🏠 Local Fechado
-                    </Label>
-                  </div>
-
-                  {isEnclosed && (
-                    <div className="ml-6 space-y-4">
-                      <div className="p-3 rounded-lg bg-teal-100 dark:bg-teal-900 border border-teal-300 dark:border-teal-700">
-                        <p className="text-xs font-semibold text-teal-900 dark:text-teal-100 mb-1">
-                          📐 Dimensionamento de Desumidificador
-                        </p>
-                        <p className="text-xs text-teal-800 dark:text-teal-200">
-                          <strong>Equipamento KODI 120:</strong> 01 máquina para cada 50m² de superfície da piscina e 240m² de área total do ambiente
-                        </p>
-                        <p className="text-xs font-semibold text-teal-900 dark:text-teal-100 mt-2">
-                          ⚙️ Fator de Correção: 1,15
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="enclosed-area">Área Total do Ambiente (m²) *</Label>
-                          <Input
-                            id="enclosed-area"
-                            type="number"
-                            step="0.01"
-                            placeholder="Ex: 240"
-                            value={enclosedArea}
-                            onChange={(e) => setEnclosedArea(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="pool-surface">Área da Superfície da Piscina (m²) *</Label>
-                          <Input
-                            id="pool-surface"
-                            type="number"
-                            step="0.01"
-                            placeholder="Ex: 50"
-                            value={poolSurfaceArea}
-                            onChange={(e) => setPoolSurfaceArea(e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      {enclosedArea && poolSurfaceArea && (
-                        <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900 border border-green-300 dark:border-green-700">
-                          <p className="text-xs font-semibold text-green-900 dark:text-green-100">
-                            ✅ Desumidificadores necessários:
-                          </p>
-                          <p className="text-sm font-bold text-green-900 dark:text-green-100 mt-1">
-                            {Math.ceil(Math.max(
-                              parseFloat(poolSurfaceArea) / 50,
-                              parseFloat(enclosedArea) / 240
-                            ))} máquina(s) KODI 120
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-4 rounded-lg border-2 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="suspended"
-                      checked={isSuspended}
-                      onCheckedChange={(checked) => setIsSuspended(checked as boolean)}
-                    />
-                    <Label htmlFor="suspended" className="cursor-pointer font-semibold">
-                      🏗️ Piscina Suspensa
-                    </Label>
-                  </div>
-                  {isSuspended && (
-                    <div className="mt-3 ml-6 p-3 rounded-lg bg-orange-100 dark:bg-orange-900 border border-orange-300 dark:border-orange-700">
-                      <p className="text-xs font-semibold text-orange-900 dark:text-orange-100">
-                        ⚠️ Fator de Perda: 1,5
-                      </p>
-                      <p className="text-xs text-orange-800 dark:text-orange-200 mt-1">
-                        Piscinas suspensas apresentam maior perda térmica e requerem maior capacidade de aquecimento
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <Button variant="outline" size="sm" onClick={addPoolArea}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Área
+              </Button>
             </div>
-          );
 
-        case 5: // Dimensões das Áreas
-          return (
-            <div className="space-y-6 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Dimensões da Piscina</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Adicione as áreas da piscina (rasa, profunda, etc.)
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" onClick={addPoolArea}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Área
-                </Button>
-              </div>
-
-              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 mb-4">
-                <h4 className="font-semibold text-sm mb-2 text-amber-900 dark:text-amber-100">
-                  ℹ️ Informações sobre Cálculo de Carga Térmica
-                </h4>
-                <ul className="text-xs space-y-1 text-amber-800 dark:text-amber-200">
-                  <li>• <strong>Áreas com profundidade até 0,6m (rasas):</strong> Cálculo específico aplicado</li>
-                  <li>• <strong>Áreas com profundidade acima de 0,6m (profundas):</strong> Cálculo específico aplicado</li>
-                  <li>• O sistema calculará a carga térmica separadamente para cada área</li>
-                  <li>• Ao final, será dimensionado o número de máquinas por piscina</li>
-                </ul>
-              </div>
-
-              <div className="space-y-4">
-                {poolAreas.map((area, index) => {
-                  const depth = parseFloat(area.depth);
-                  const isShallow = depth > 0 && depth <= 0.6;
-                  
-                  return (
-                    <div key={area.id} className="p-4 rounded-lg border space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold">Área {index + 1}</h4>
-                          {depth > 0 && (
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              isShallow 
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' 
-                                : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300'
-                            }`}>
-                              {isShallow ? 'Área Rasa (≤ 0,6m)' : 'Área Profunda (> 0,6m)'}
-                            </span>
-                          )}
-                        </div>
-                        {poolAreas.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removePoolArea(area.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+            <div className="space-y-4">
+              {poolAreas.map((area, index) => {
+                const depth = parseFloat(area.depth);
+                const isShallow = depth > 0 && depth <= 0.6;
+                
+                return (
+                  <div key={area.id} className="p-4 rounded-lg border space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold">Área {index + 1}</h4>
+                        {depth > 0 && (
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            isShallow 
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' 
+                              : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300'
+                          }`}>
+                            {isShallow ? 'Área Rasa (≤ 0,6m)' : 'Área Profunda (> 0,6m)'}
+                          </span>
                         )}
                       </div>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>Comprimento (m)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="Ex: 10"
-                            value={area.length}
-                            onChange={(e) => updatePoolArea(area.id, "length", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Largura (m)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="Ex: 5"
-                            value={area.width}
-                            onChange={(e) => updatePoolArea(area.id, "width", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Profundidade (m)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="Ex: 1.5"
-                            value={area.depth}
-                            onChange={(e) => updatePoolArea(area.id, "depth", e.target.value)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-
-        case 6: // Características Especiais
-          return (
-            <div className="space-y-6 p-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Características Especiais</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Recursos adicionais da piscina
-                </p>
-              </div>
-
-              <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 mb-4">
-                <h4 className="font-semibold text-sm mb-2 text-purple-900 dark:text-purple-100">
-                  📊 Cálculo de Carga Térmica Final
-                </h4>
-                <p className="text-xs text-purple-800 dark:text-purple-200">
-                  O sistema realizará o cálculo de carga térmica separado por piscina, dividido por:
-                </p>
-                <ul className="text-xs space-y-1 mt-2 ml-4 text-purple-700 dark:text-purple-300">
-                  <li>• <strong>Áreas rasas</strong> (profundidade ≤ 0,6m)</li>
-                  <li>• <strong>Áreas profundas</strong> (profundidade &gt; 0,6m)</li>
-                  <li>• <strong>Cascata</strong> (cálculo por área)</li>
-                  <li>• <strong>Borda infinita</strong> (cálculo por área)</li>
-                </ul>
-                <p className="text-xs mt-2 font-semibold text-purple-900 dark:text-purple-100">
-                  Resultado: Número de máquinas necessárias por piscina
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-4 p-4 rounded-lg border bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="waterfall"
-                      checked={hasWaterfall}
-                      onCheckedChange={(checked) => setHasWaterfall(checked as boolean)}
-                    />
-                    <Label htmlFor="waterfall" className="cursor-pointer font-semibold">
-                      💧 Cascata
-                    </Label>
+                      {poolAreas.length > 1 && (
+                    <Button
+                      variant="ghost"
+                          size="sm"
+                          onClick={() => removePoolArea(area.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                      )}
                   </div>
-
-                  {hasWaterfall && (
-                    <>
-                      <div className="grid grid-cols-2 gap-4 ml-6">
-                        <div className="space-y-2">
-                          <Label>Altura da Cascata (m) *</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="Ex: 1.5"
-                            value={waterfallHeight}
-                            onChange={(e) => setWaterfallHeight(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Largura da Cascata (m) *</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="Ex: 2"
-                            value={waterfallWidth}
-                            onChange={(e) => setWaterfallWidth(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground ml-6">
-                        Cálculo específico de carga térmica será aplicado à área da cascata
-                      </p>
-                    </>
-                  )}
-                </div>
-
-                <div className="space-y-4 p-4 rounded-lg border bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="infinity"
-                      checked={hasInfinityEdge}
-                      onCheckedChange={(checked) => setHasInfinityEdge(checked as boolean)}
-                    />
-                    <Label htmlFor="infinity" className="cursor-pointer font-semibold">
-                      ♾️ Borda Infinita
-                    </Label>
-                  </div>
-
-                  {hasInfinityEdge && (
-                    <>
-                      <div className="grid grid-cols-3 gap-4 ml-6">
-                        <div className="space-y-2">
-                          <Label>Comprimento (m) *</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="Ex: 10"
-                            value={infinityLength}
-                            onChange={(e) => setInfinityLength(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Altura (m) *</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="Ex: 0.5"
-                            value={infinityHeight}
-                            onChange={(e) => setInfinityHeight(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Largura (m) *</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="Ex: 0.3"
-                            value={infinityWidth}
-                            onChange={(e) => setInfinityWidth(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground ml-6">
-                        Cálculo específico de carga térmica será aplicado à área da borda infinita
-                      </p>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-
-        case 7: // Resultados e Seleção de Máquinas
-          return (
-            <div className="space-y-6 p-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Resultado do Dimensionamento</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Cálculo de carga térmica e sugestão de equipamentos
-                </p>
-              </div>
-
-              {/* Resumo do Cálculo */}
-              <div className="p-6 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-2 border-blue-200 dark:border-blue-800">
-                <h4 className="font-semibold text-lg mb-4 text-blue-900 dark:text-blue-100">
-                  📊 Capacidade Térmica Calculada
-                </h4>
-                <div className="text-center p-6 bg-white dark:bg-gray-900 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-2">Carga Térmica Total</p>
-                  <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                    {thermalLoad.toFixed(2)} kW
-                  </p>
-                </div>
-                <div className="mt-4 text-xs space-y-1 text-blue-800 dark:text-blue-200">
-                  <p>• Período de utilização: {selectedMonths.join(", ")}</p>
-                  <p>• Temperatura desejada: {desiredTemp}°C</p>
-                  <p>• Tempo de aquecimento inicial: {heatingTime.toFixed(1)} horas</p>
-                  <p>• Frequência: {useFrequency === "diario" ? "Uso Diário" : "Uso Esporádico"}</p>
-                </div>
-              </div>
-
-              {/* Máquinas Sugeridas */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-lg">Equipamentos Sugeridos</h4>
-                  <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                    selectedMonths.some(m => coldMonths.includes(m))
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                      : 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
-                  }`}>
-                    {selectedMonths.some(m => coldMonths.includes(m))
-                      ? 'Período Frio (26°C teste)'
-                      : 'Período Quente (15°C teste)'}
-                  </span>
-                </div>
-
-                {selectedMachines.map((machine, index) => (
-                  <div key={index} className="p-4 rounded-lg border-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h5 className="font-bold text-lg text-green-900 dark:text-green-100">
-                          {machine.model}
-                        </h5>
-                        <p className="text-sm text-green-700 dark:text-green-300">
-                          Capacidade: {machine.capacity} kW | Vazão: {machine.flow} m³/h
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Label className="text-sm font-medium">Quantidade:</Label>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Comprimento (m)</Label>
                         <Input
                           type="number"
-                          min="1"
-                          value={machine.quantity}
-                          onChange={(e) => updateMachineQuantity(index, parseInt(e.target.value) || 1)}
-                          className="w-20 text-center"
+                          step="0.01"
+                          placeholder="Ex: 10"
+                          value={area.length}
+                          onChange={(e) => updatePoolArea(area.id, "length", e.target.value)}
+                        />
+              </div>
+                      <div className="space-y-2">
+                        <Label>Largura (m)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Ex: 5"
+                          value={area.width}
+                          onChange={(e) => updatePoolArea(area.id, "width", e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Profundidade (m)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Ex: 1.5"
+                          value={area.depth}
+                          onChange={(e) => updatePoolArea(area.id, "depth", e.target.value)}
                         />
                       </div>
                     </div>
-                    <div className="p-3 rounded bg-green-100 dark:bg-green-900 text-xs space-y-1 text-green-800 dark:text-green-200">
-                      <p>• <strong>Capacidade total:</strong> {(machine.capacity * machine.quantity).toFixed(2)} kW</p>
-                      <p>• <strong>Vazão total:</strong> {(machine.flow * machine.quantity).toFixed(2)} m³/h</p>
-                      <p>• <strong>Acessório necessário:</strong> {machine.quantity}x Motobomba c/vazão {machine.flow}m³/h</p>
-                    </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
+            </div>
+          </div>
 
-              {/* Recálculo de Tempo e Consumo */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800">
-                  <h5 className="font-semibold text-sm mb-2 text-purple-900 dark:text-purple-100">
-                    ⏱️ Novo Tempo de Aquecimento
-                  </h5>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                    {heatingTime.toFixed(1)}h
-                  </p>
-                  <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
-                    Tempo para o primeiro aquecimento
-                  </p>
+          <Separator />
+
+          {/* Seção 6: Características Especiais */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">6. Características Especiais</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Recursos adicionais da piscina
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-4 p-4 rounded-lg border bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="waterfall"
+                    checked={hasWaterfall}
+                    onCheckedChange={(checked) => setHasWaterfall(checked as boolean)}
+                  />
+                  <Label htmlFor="waterfall" className="cursor-pointer font-semibold">
+                    💧 Cascata
+                  </Label>
                 </div>
 
-                <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800">
-                  <h5 className="font-semibold text-sm mb-2 text-amber-900 dark:text-amber-100">
-                    ⚡ Consumo Elétrico
-                  </h5>
-                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-                    Primeiro aquecimento:
-                  </p>
-                  <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
-                    {energyConsumption.initial.toFixed(2)} kWh
-                  </p>
-                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-200 mt-2">
-                    Estimativa diária:
-                  </p>
-                  <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
-                    {energyConsumption.daily.toFixed(2)} kWh
-                  </p>
-                </div>
-              </div>
+                {hasWaterfall && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4 ml-6">
+                      <div className="space-y-2">
+                        <Label>Altura da Cascata (m) *</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Ex: 1.5"
+                          value={waterfallHeight}
+                          onChange={(e) => setWaterfallHeight(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Largura da Cascata (m) *</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Ex: 2"
+                          value={waterfallWidth}
+                          onChange={(e) => setWaterfallWidth(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground ml-6">
+                      Cálculo específico de carga térmica será aplicado à área da cascata
+                    </p>
+                  </>
+            )}
+          </div>
 
-              {/* Desumidificador (se aplicável) */}
-              {isEnclosed && enclosedArea && poolSurfaceArea && (
-                <div className="p-4 rounded-lg bg-teal-50 dark:bg-teal-950 border-2 border-teal-300 dark:border-teal-700">
-                  <h5 className="font-semibold mb-2 text-teal-900 dark:text-teal-100">
-                    💨 Desumidificador de Ambiente
-                  </h5>
-                  <p className="text-sm text-teal-800 dark:text-teal-200">
-                    <strong>Quantidade necessária:</strong> {Math.ceil(Math.max(
-                      parseFloat(poolSurfaceArea) / 50,
-                      parseFloat(enclosedArea) / 240
-                    ))} máquina(s) KODI 120
-                  </p>
-                  <p className="text-xs text-teal-700 dark:text-teal-300 mt-1">
-                    Baseado em área de superfície ({poolSurfaceArea}m²) e área total ({enclosedArea}m²)
-                  </p>
+              <div className="space-y-4 p-4 rounded-lg border bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="infinity"
+                    checked={hasInfinityEdge}
+                    onCheckedChange={(checked) => setHasInfinityEdge(checked as boolean)}
+                  />
+                  <Label htmlFor="infinity" className="cursor-pointer font-semibold">
+                    ♾️ Borda Infinita
+                  </Label>
                 </div>
-              )}
 
-              <div className="p-4 rounded-lg bg-gray-100 dark:bg-gray-800 border">
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  <strong>Observação:</strong> Os cálculos foram realizados com base nas fórmulas técnicas e dados climáticos da NASA. 
-                  Você pode ajustar a quantidade de máquinas conforme necessário. O sistema recalculará automaticamente o tempo 
-                  de aquecimento e consumo elétrico.
-                </p>
+                {hasInfinityEdge && (
+                  <>
+                    <div className="grid grid-cols-3 gap-4 ml-6">
+            <div className="space-y-2">
+                        <Label>Comprimento (m) *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                          placeholder="Ex: 10"
+                          value={infinityLength}
+                          onChange={(e) => setInfinityLength(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Altura (m) *</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Ex: 0.5"
+                          value={infinityHeight}
+                          onChange={(e) => setInfinityHeight(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Largura (m) *</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Ex: 0.3"
+                          value={infinityWidth}
+                          onChange={(e) => setInfinityWidth(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground ml-6">
+                      Cálculo específico de carga térmica será aplicado à área da borda infinita
+                    </p>
+                  </>
+                )}
               </div>
             </div>
-          );
+          </div>
 
-        default:
-          return null;
-      }
-    }
+          <Separator />
 
-    // Fluxo Residencial (simplificado por enquanto)
-    if (segment === "residencial") {
-      return (
-        <div className="space-y-6 p-6">
-          <div>
-            <h3 className="text-lg font-semibold mb-2">Proposta Residencial</h3>
-            <p className="text-muted-foreground">
-              Funcionalidade em desenvolvimento
-            </p>
+          {/* Seção 7: Resultados e Seleção de Máquinas */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold mb-2">7. Resultado do Dimensionamento</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Cálculo de carga térmica e sugestão de equipamentos
+                </p>
+            </div>
+              <Button onClick={calculateResults} variant="default">
+                Calcular Dimensionamento
+              </Button>
+            </div>
+
+            {thermalLoad > 0 && (
+              <>
+                {/* Resumo do Cálculo */}
+                <div className="p-6 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-2 border-blue-200 dark:border-blue-800">
+                  <h4 className="font-semibold text-lg mb-4 text-blue-900 dark:text-blue-100">
+                    📊 Capacidade Térmica Calculada
+                  </h4>
+                  <div className="text-center p-6 bg-white dark:bg-gray-900 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-2">Carga Térmica Total</p>
+                    <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                      {thermalLoad.toFixed(2)} kW
+                    </p>
+                  </div>
+                  <div className="mt-4 text-xs space-y-1 text-blue-800 dark:text-blue-200">
+                    <p>• Período de utilização: {selectedMonths.join(", ") || "Não selecionado"}</p>
+                    <p>• Temperatura desejada: {desiredTemp || "Não informada"}°C</p>
+                    <p>• Tempo de aquecimento inicial: {heatingTime.toFixed(1)} horas</p>
+                    <p>• Frequência: {useFrequency === "diario" ? "Uso Diário" : useFrequency === "esporadico" ? "Uso Esporádico" : "Não selecionada"}</p>
+                  </div>
+                </div>
+
+                {/* Máquinas Sugeridas */}
+                {selectedMachines.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-lg">Equipamentos Sugeridos</h4>
+                      <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                        selectedMonths.some(m => coldMonths.includes(m))
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                          : 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
+                      }`}>
+                        {selectedMonths.some(m => coldMonths.includes(m))
+                          ? 'Período Frio (26°C teste)'
+                          : 'Período Quente (15°C teste)'}
+              </span>
+            </div>
+
+                    {selectedMachines.map((machine, index) => (
+                      <div key={index} className="p-4 rounded-lg border-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h5 className="font-bold text-lg text-green-900 dark:text-green-100">
+                              {machine.model}
+                            </h5>
+                            <p className="text-sm text-green-700 dark:text-green-300">
+                              Capacidade: {machine.capacity} kW | Vazão: {machine.flow} m³/h
+                            </p>
+          </div>
+                          <div className="flex items-center gap-3">
+                            <Label className="text-sm font-medium">Quantidade:</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={machine.quantity}
+                              onChange={(e) => updateMachineQuantity(index, parseInt(e.target.value) || 1)}
+                              className="w-20 text-center"
+                            />
+        </div>
+                        </div>
+                        <div className="p-3 rounded bg-green-100 dark:bg-green-900 text-xs space-y-1 text-green-800 dark:text-green-200">
+                          <p>• <strong>Capacidade total:</strong> {(machine.capacity * machine.quantity).toFixed(2)} kW</p>
+                          <p>• <strong>Vazão total:</strong> {(machine.flow * machine.quantity).toFixed(2)} m³/h</p>
+                          <p>• <strong>Acessório necessário:</strong> {machine.quantity}x Motobomba c/vazão {machine.flow}m³/h</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Recálculo de Tempo e Consumo */}
+                {heatingTime > 0 && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800">
+                      <h5 className="font-semibold text-sm mb-2 text-purple-900 dark:text-purple-100">
+                        ⏱️ Novo Tempo de Aquecimento
+                      </h5>
+                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                        {heatingTime.toFixed(1)}h
+                      </p>
+                      <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
+                        Tempo para o primeiro aquecimento
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800">
+                      <h5 className="font-semibold text-sm mb-2 text-amber-900 dark:text-amber-100">
+                        ⚡ Consumo Elétrico
+                      </h5>
+                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                        Primeiro aquecimento:
+                      </p>
+                      <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
+                        {energyConsumption.initial.toFixed(2)} kWh
+                      </p>
+                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-200 mt-2">
+                        Estimativa diária:
+                      </p>
+                      <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
+                        {energyConsumption.daily.toFixed(2)} kWh
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Desumidificador (se aplicável) */}
+                {isEnclosed && enclosedArea && poolSurfaceArea && (
+                  <div className="p-4 rounded-lg bg-teal-50 dark:bg-teal-950 border-2 border-teal-300 dark:border-teal-700">
+                    <h5 className="font-semibold mb-2 text-teal-900 dark:text-teal-100">
+                      💨 Desumidificador de Ambiente
+                    </h5>
+                    <p className="text-sm text-teal-800 dark:text-teal-200">
+                      <strong>Quantidade necessária:</strong> {Math.ceil(Math.max(
+                        parseFloat(poolSurfaceArea) / 50,
+                        parseFloat(enclosedArea) / 240
+                      ))} máquina(s) KODI 120
+                    </p>
+                    <p className="text-xs text-teal-700 dark:text-teal-300 mt-1">
+                      Baseado em área de superfície ({poolSurfaceArea}m²) e área total ({enclosedArea}m²)
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       );
     }
-  };
 
-  const getTotalSteps = () => {
-    if (segment === "piscina") return 7;
-    if (segment === "residencial") return 1;
-    return 0;
+    // Fluxo Residencial - Formulário Unificado
+    if (segment === "residencial") {
+      return (
+        <div className="space-y-6 p-6">
+          {/* Seção 0: Serviços Adicionais */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Serviços Adicionais</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Selecione os serviços adicionais necessários
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+                <Checkbox
+                  id="installation-res"
+                  checked={needsInstallation}
+                  onCheckedChange={(checked) => setNeedsInstallation(checked as boolean)}
+                />
+                <Label htmlFor="installation-res" className="cursor-pointer font-semibold">
+                  🔧 Serviço de Instalação
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
+                <Checkbox
+                  id="project-res"
+                  checked={needsProject}
+                  onCheckedChange={(checked) => setNeedsProject(checked as boolean)}
+                />
+                <Label htmlFor="project-res" className="cursor-pointer font-semibold">
+                  📐 Projetos
+                </Label>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Seção 1: Banheiros */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">1. Banheiros</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Configure a vazão e tempo de utilização das torneiras dos banheiros
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="bathroom-flow">Vazão das Torneiras (L/min) *</Label>
+                <Select value={bathroomFlow} onValueChange={setBathroomFlow}>
+                  <SelectTrigger id="bathroom-flow">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="4">4 L/min</SelectItem>
+                    <SelectItem value="6">6 L/min (Padrão)</SelectItem>
+                    <SelectItem value="custom">Digitar vazão</SelectItem>
+                  </SelectContent>
+                </Select>
+                {bathroomFlow === "custom" && (
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder="Digite a vazão"
+                    value={bathroomFlowCustom}
+                    onChange={(e) => setBathroomFlowCustom(e.target.value)}
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bathroom-time">Tempo de Utilização (min) *</Label>
+                <Select value={bathroomTime} onValueChange={setBathroomTime}>
+                  <SelectTrigger id="bathroom-time">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="4">4 min</SelectItem>
+                    <SelectItem value="6">6 min</SelectItem>
+                    <SelectItem value="8">8 min (Padrão)</SelectItem>
+                    <SelectItem value="10">10 min</SelectItem>
+                    <SelectItem value="custom">Digitar tempo</SelectItem>
+                  </SelectContent>
+                </Select>
+                {bathroomTime === "custom" && (
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder="Digite o tempo"
+                    value={bathroomTimeCustom}
+                    onChange={(e) => setBathroomTimeCustom(e.target.value)}
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bathroom-qty">Quantidade *</Label>
+                <Input
+                  id="bathroom-qty"
+                  type="number"
+                  min="1"
+                  value={bathroomQuantity}
+                  onChange={(e) => setBathroomQuantity(parseInt(e.target.value) || 1)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Seção 2: Cozinha */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">2. Cozinha</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Configure a vazão e tempo de utilização das torneiras da cozinha
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="kitchen-flow">Vazão das Torneiras (L/min) *</Label>
+                <Select value={kitchenFlow} onValueChange={setKitchenFlow}>
+                  <SelectTrigger id="kitchen-flow">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="4">4 L/min</SelectItem>
+                    <SelectItem value="6">6 L/min</SelectItem>
+                    <SelectItem value="9">9 L/min (Padrão)</SelectItem>
+                    <SelectItem value="custom">Digitar vazão</SelectItem>
+                  </SelectContent>
+                </Select>
+                {kitchenFlow === "custom" && (
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder="Digite a vazão"
+                    value={kitchenFlowCustom}
+                    onChange={(e) => setKitchenFlowCustom(e.target.value)}
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="kitchen-time">Tempo de Utilização (min) *</Label>
+                <Select value={kitchenTime} onValueChange={setKitchenTime}>
+                  <SelectTrigger id="kitchen-time">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10 min</SelectItem>
+                    <SelectItem value="15">15 min</SelectItem>
+                    <SelectItem value="20">20 min (Padrão)</SelectItem>
+                    <SelectItem value="custom">Digitar tempo</SelectItem>
+                  </SelectContent>
+                </Select>
+                {kitchenTime === "custom" && (
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder="Digite o tempo"
+                    value={kitchenTimeCustom}
+                    onChange={(e) => setKitchenTimeCustom(e.target.value)}
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="kitchen-qty">Quantidade *</Label>
+                <Input
+                  id="kitchen-qty"
+                  type="number"
+                  min="1"
+                  value={kitchenQuantity}
+                  onChange={(e) => setKitchenQuantity(parseInt(e.target.value) || 1)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Seção 3: Lavanderia */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">3. Lavanderia</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Configure a vazão e tempo de utilização das torneiras da lavanderia
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="laundry-flow">Vazão das Torneiras (L/min) *</Label>
+                <Select value={laundryFlow} onValueChange={setLaundryFlow}>
+                  <SelectTrigger id="laundry-flow">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="4">4 L/min</SelectItem>
+                    <SelectItem value="6">6 L/min</SelectItem>
+                    <SelectItem value="9">9 L/min (Padrão)</SelectItem>
+                    <SelectItem value="custom">Digitar vazão</SelectItem>
+                  </SelectContent>
+                </Select>
+                {laundryFlow === "custom" && (
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder="Digite a vazão"
+                    value={laundryFlowCustom}
+                    onChange={(e) => setLaundryFlowCustom(e.target.value)}
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="laundry-time">Tempo de Utilização (min) *</Label>
+                <Select value={laundryTime} onValueChange={setLaundryTime}>
+                  <SelectTrigger id="laundry-time">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5 min (Padrão)</SelectItem>
+                    <SelectItem value="10">10 min</SelectItem>
+                    <SelectItem value="custom">Digitar tempo</SelectItem>
+                  </SelectContent>
+                </Select>
+                {laundryTime === "custom" && (
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder="Digite o tempo"
+                    value={laundryTimeCustom}
+                    onChange={(e) => setLaundryTimeCustom(e.target.value)}
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="laundry-qty">Quantidade *</Label>
+                <Input
+                  id="laundry-qty"
+                  type="number"
+                  min="1"
+                  value={laundryQuantity}
+                  onChange={(e) => setLaundryQuantity(parseInt(e.target.value) || 1)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Seção 4: Banheira */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">4. Banheira</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Configure a vazão e frequência de uso da banheira
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="bathtub-flow">Vazão (L/min) *</Label>
+                <Select value={bathtubFlow} onValueChange={setBathtubFlow}>
+                  <SelectTrigger id="bathtub-flow">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="250">250 L/min</SelectItem>
+                    <SelectItem value="300">300 L/min</SelectItem>
+                    <SelectItem value="350">350 L/min (Padrão)</SelectItem>
+                    <SelectItem value="custom">Digitar vazão</SelectItem>
+                  </SelectContent>
+                </Select>
+                {bathtubFlow === "custom" && (
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder="Digite a vazão"
+                    value={bathtubFlowCustom}
+                    onChange={(e) => setBathtubFlowCustom(e.target.value)}
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bathtub-freq">Frequência de Uso (min) *</Label>
+                <Select value={bathtubFrequency} onValueChange={setBathtubFrequency}>
+                  <SelectTrigger id="bathtub-freq">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 min</SelectItem>
+                    <SelectItem value="2">2 min (Padrão)</SelectItem>
+                    <SelectItem value="3">3 min</SelectItem>
+                    <SelectItem value="custom">Digitar frequência</SelectItem>
+                  </SelectContent>
+                </Select>
+                {bathtubFrequency === "custom" && (
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder="Digite a frequência"
+                    value={bathtubFrequencyCustom}
+                    onChange={(e) => setBathtubFrequencyCustom(e.target.value)}
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bathtub-qty">Quantidade *</Label>
+                <Input
+                  id="bathtub-qty"
+                  type="number"
+                  min="1"
+                  value={bathtubQuantity}
+                  onChange={(e) => setBathtubQuantity(parseInt(e.target.value) || 1)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Seção 5: Resultado do Cálculo */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold mb-2">5. Resultado do Dimensionamento</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Cálculo da vazão máxima simultânea para dimensionamento do equipamento
+                </p>
+              </div>
+              <Button onClick={calculateMaxSimultaneousFlow} variant="default">
+                Calcular Vazão Máxima
+              </Button>
+            </div>
+
+            {maxSimultaneousFlow > 0 && (
+              <div className="p-6 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-2 border-blue-200 dark:border-blue-800">
+                <h4 className="font-semibold text-lg mb-4 text-blue-900 dark:text-blue-100">
+                  📊 Vazão Máxima Simultânea Calculada
+                </h4>
+                <div className="text-center p-6 bg-white dark:bg-gray-900 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-2">Vazão Máxima Simultânea</p>
+                  <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                    {maxSimultaneousFlow.toFixed(2)} L/min
+                  </p>
+                  <p className="text-lg font-semibold text-blue-700 dark:text-blue-300 mt-2">
+                    {maxSimultaneousFlow > 0 ? (maxSimultaneousFlow * 60).toFixed(2) : 0} L/h
+                  </p>
+                </div>
+                <div className="mt-4 text-xs space-y-1 text-blue-800 dark:text-blue-200">
+                  <p>• Este valor representa a vazão máxima simultânea considerando todos os pontos de consumo</p>
+                  <p>• Utilize este valor para dimensionar o equipamento de aquecimento adequado</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
   };
 
   return (
@@ -1037,72 +1449,37 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
         <DialogHeader>
           <DialogTitle>
             {!segment ? "Nova Proposta - Selecione a Segmentação" : 
-             segment === "piscina" ? `Nova Proposta - Piscina (Passo ${step} de ${getTotalSteps()})` :
+             segment === "piscina" ? "Nova Proposta - Piscina" :
              "Nova Proposta - Residencial"}
           </DialogTitle>
           <DialogDescription>
             {!segment ? "Escolha o tipo de proposta que deseja criar" :
-             segment === "piscina" && step === 1 ? "Informe o local para buscar dados climáticos" :
-             segment === "piscina" && step === 2 ? "Selecione os meses de uso da piscina" :
-             segment === "piscina" && step === 3 ? "Configure a frequência e temperatura" :
-             segment === "piscina" && step === 4 ? "Informe as características do ambiente" :
-             segment === "piscina" && step === 5 ? "Defina as dimensões das áreas" :
-             segment === "piscina" && step === 6 ? "Adicione características especiais" :
-             segment === "piscina" && step === 7 ? "Revise o dimensionamento e equipamentos sugeridos" :
+             segment === "piscina" ? "Preencha todas as informações para calcular o dimensionamento" :
              "Preencha os dados da proposta"}
           </DialogDescription>
         </DialogHeader>
 
         {renderContent()}
 
-        <DialogFooter className="flex justify-between">
-          <div className="flex gap-2">
-            {segment && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (step === 1) {
-                    setSegment(null);
-                  } else {
-                    setStep(step - 1);
-                  }
-                }}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
-              </Button>
-            )}
-          </div>
+        <DialogFooter className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => {
+            resetForm();
+            onOpenChange(false);
+          }}>
+            Cancelar
+          </Button>
 
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => {
-              resetForm();
-              onOpenChange(false);
-            }}>
-              Cancelar
+          {segment === "piscina" && (
+            <Button onClick={handleSubmit}>
+              Finalizar Proposta
+          </Button>
+          )}
+
+          {segment === "residencial" && (
+            <Button onClick={handleSubmit}>
+              Criar Proposta
             </Button>
-
-            {segment && (
-              <>
-                {(segment === "piscina" && step < 7) || (segment === "residencial" && step < 1) ? (
-                  <Button onClick={() => {
-                    // Se estiver saindo do passo 6, calcular resultados
-                    if (segment === "piscina" && step === 6) {
-                      calculateResults();
-                    }
-                    setStep(step + 1);
-                  }}>
-                    {segment === "piscina" && step === 6 ? "Calcular Dimensionamento" : "Próximo"}
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                ) : (
-                  <Button onClick={handleSubmit}>
-                    Finalizar Proposta
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
