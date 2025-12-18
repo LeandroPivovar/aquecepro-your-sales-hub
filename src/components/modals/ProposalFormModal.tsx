@@ -20,7 +20,17 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Waves, Home, Plus, Trash2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Waves, Home, Plus, Trash2, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ProposalFormModalProps {
   open: boolean;
@@ -32,6 +42,17 @@ const mockCities = [
   { city: "Campinas", state: "SP" },
   { city: "Santos", state: "SP" },
   { city: "Rio de Janeiro", state: "RJ" },
+];
+
+const mockClients = [
+  { id: "1", name: "João Silva", email: "joao@example.com" },
+  { id: "2", name: "Maria Santos", email: "maria@example.com" },
+  { id: "3", name: "Pedro Oliveira", email: "pedro@example.com" },
+  { id: "4", name: "Ana Costa", email: "ana@example.com" },
+  { id: "5", name: "Carlos Ferreira", email: "carlos@example.com" },
+  { id: "6", name: "Juliana Alves", email: "juliana@example.com" },
+  { id: "7", name: "Roberto Lima", email: "roberto@example.com" },
+  { id: "8", name: "Fernanda Souza", email: "fernanda@example.com" },
 ];
 
 const months = [
@@ -80,12 +101,34 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
   // Segmentação
   const [segment, setSegment] = useState<"piscina" | "residencial" | null>(null);
 
+  // Cliente (para ambos os segmentos)
+  const [selectedClient, setSelectedClient] = useState("");
+  const [clientOpen, setClientOpen] = useState(false);
+
   // Serviços Adicionais
   const [needsInstallation, setNeedsInstallation] = useState(false);
   const [needsProject, setNeedsProject] = useState(false);
+  
+  // Serviços Adicionais - Piscina
+  const [hasFiltrationSystem, setHasFiltrationSystem] = useState(false);
+  const [hasLighting, setHasLighting] = useState(false);
+  const [hasOzone, setHasOzone] = useState(false);
+  const [hasChlorineGenerator, setHasChlorineGenerator] = useState(false);
+  const [hasWaterfallService, setHasWaterfallService] = useState(false);
+  
+  // Circulação de Rede (Residencial)
+  const [hasNetworkCirculation, setHasNetworkCirculation] = useState(false);
+  const [networkCirculationQuantity, setNetworkCirculationQuantity] = useState("");
+  
+  // Sistema de Pressurização (Residencial)
+  const [hasPressurizationSystem, setHasPressurizationSystem] = useState(false);
+  const [simultaneousShowers, setSimultaneousShowers] = useState("");
 
-  // Passo 1: Local de Instalação
+  // Passo 1: Local de Instalação (Piscina)
   const [selectedCity, setSelectedCity] = useState("");
+
+  // Cidade (Residencial)
+  const [selectedCityResidential, setSelectedCityResidential] = useState("");
 
   // Passo 2: Meses de Utilização
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
@@ -122,11 +165,30 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
   const [energyConsumption, setEnergyConsumption] = useState({ initial: 0, daily: 0 });
 
   // Formulário Residencial
+  // Chuveiros
+  // Chuveiro 01
+  const [shower1Flow, setShower1Flow] = useState("");
+  const [shower1FlowCustom, setShower1FlowCustom] = useState("");
+  const [shower1Time, setShower1Time] = useState("");
+  const [shower1TimeCustom, setShower1TimeCustom] = useState("");
+  
+  // Chuveiro 02
+  const [shower2Flow, setShower2Flow] = useState("");
+  const [shower2FlowCustom, setShower2FlowCustom] = useState("");
+  const [shower2Time, setShower2Time] = useState("");
+  const [shower2TimeCustom, setShower2TimeCustom] = useState("");
+  
+  // Torneiras Banheiro
   const [bathroomFlow, setBathroomFlow] = useState("");
   const [bathroomFlowCustom, setBathroomFlowCustom] = useState("");
   const [bathroomTime, setBathroomTime] = useState("");
   const [bathroomTimeCustom, setBathroomTimeCustom] = useState("");
-  const [bathroomQuantity, setBathroomQuantity] = useState(1);
+  
+  // Banheira
+  const [bathtubFlow, setBathtubFlow] = useState("");
+  const [bathtubFlowCustom, setBathtubFlowCustom] = useState("");
+  const [bathtubFrequency, setBathtubFrequency] = useState("");
+  const [bathtubFrequencyCustom, setBathtubFrequencyCustom] = useState("");
 
   const [kitchenFlow, setKitchenFlow] = useState("");
   const [kitchenFlowCustom, setKitchenFlowCustom] = useState("");
@@ -139,12 +201,6 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
   const [laundryTime, setLaundryTime] = useState("");
   const [laundryTimeCustom, setLaundryTimeCustom] = useState("");
   const [laundryQuantity, setLaundryQuantity] = useState(1);
-
-  const [bathtubFlow, setBathtubFlow] = useState("");
-  const [bathtubFlowCustom, setBathtubFlowCustom] = useState("");
-  const [bathtubFrequency, setBathtubFrequency] = useState("");
-  const [bathtubFrequencyCustom, setBathtubFrequencyCustom] = useState("");
-  const [bathtubQuantity, setBathtubQuantity] = useState(1);
 
   const [maxSimultaneousFlow, setMaxSimultaneousFlow] = useState(0);
 
@@ -332,11 +388,35 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
   const calculateMaxSimultaneousFlow = () => {
     const flows: number[] = [];
 
-    // Banheiros
+    // Chuveiro 01
+    if (shower1Flow || shower1FlowCustom) {
+      const flow = shower1Flow === "custom" ? parseFloat(shower1FlowCustom) : parseFloat(shower1Flow);
+      if (!isNaN(flow) && flow > 0) {
+        flows.push(flow);
+      }
+    }
+
+    // Chuveiro 02
+    if (shower2Flow || shower2FlowCustom) {
+      const flow = shower2Flow === "custom" ? parseFloat(shower2FlowCustom) : parseFloat(shower2Flow);
+      if (!isNaN(flow) && flow > 0) {
+        flows.push(flow);
+      }
+    }
+
+    // Torneiras Banheiro
     if (bathroomFlow || bathroomFlowCustom) {
       const flow = bathroomFlow === "custom" ? parseFloat(bathroomFlowCustom) : parseFloat(bathroomFlow);
-      if (!isNaN(flow) && bathroomQuantity > 0) {
-        flows.push(flow * bathroomQuantity);
+      if (!isNaN(flow) && flow > 0) {
+        flows.push(flow);
+      }
+    }
+
+    // Banheira
+    if (bathtubFlow || bathtubFlowCustom) {
+      const flow = bathtubFlow === "custom" ? parseFloat(bathtubFlowCustom) : parseFloat(bathtubFlow);
+      if (!isNaN(flow) && flow > 0) {
+        flows.push(flow);
       }
     }
 
@@ -356,14 +436,6 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
       }
     }
 
-    // Banheira
-    if (bathtubFlow || bathtubFlowCustom) {
-      const flow = bathtubFlow === "custom" ? parseFloat(bathtubFlowCustom) : parseFloat(bathtubFlow);
-      if (!isNaN(flow) && bathtubQuantity > 0) {
-        flows.push(flow * bathtubQuantity);
-      }
-    }
-
     // Vazão máxima simultânea = soma das maiores vazões
     const totalFlow = flows.reduce((sum, f) => sum + f, 0);
     setMaxSimultaneousFlow(totalFlow);
@@ -372,9 +444,17 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
 
   const resetForm = () => {
     setSegment(null);
+    setSelectedClient("");
+    setClientOpen(false);
     setNeedsInstallation(false);
     setNeedsProject(false);
+    setHasFiltrationSystem(false);
+    setHasLighting(false);
+    setHasOzone(false);
+    setHasChlorineGenerator(false);
+    setHasWaterfallService(false);
     setSelectedCity("");
+    setSelectedCityResidential("");
     setSelectedMonths([]);
     setUseFrequency("");
     setDesiredTemp("");
@@ -392,11 +472,24 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
     setInfinityWidth("");
     
     // Reset Residencial
+    // Chuveiro 01
+    setShower1Flow("");
+    setShower1FlowCustom("");
+    setShower1Time("");
+    setShower1TimeCustom("");
+    // Chuveiro 02
+    setShower2Flow("");
+    setShower2FlowCustom("");
+    setShower2Time("");
+    setShower2TimeCustom("");
     setBathroomFlow("");
     setBathroomFlowCustom("");
     setBathroomTime("");
     setBathroomTimeCustom("");
-    setBathroomQuantity(1);
+    setBathtubFlow("");
+    setBathtubFlowCustom("");
+    setBathtubFrequency("");
+    setBathtubFrequencyCustom("");
     setKitchenFlow("");
     setKitchenFlowCustom("");
     setKitchenTime("");
@@ -407,11 +500,10 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
     setLaundryTime("");
     setLaundryTimeCustom("");
     setLaundryQuantity(1);
-    setBathtubFlow("");
-    setBathtubFlowCustom("");
-    setBathtubFrequency("");
-    setBathtubFrequencyCustom("");
-    setBathtubQuantity(1);
+    setHasNetworkCirculation(false);
+    setNetworkCirculationQuantity("");
+    setHasPressurizationSystem(false);
+    setSimultaneousShowers("");
     setMaxSimultaneousFlow(0);
   };
 
@@ -419,8 +511,16 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
     if (segment === "piscina") {
     console.log({
         segment,
+        client: selectedClient,
         needsInstallation,
         needsProject,
+        additionalServices: {
+          filtrationSystem: hasFiltrationSystem,
+          lighting: hasLighting,
+          ozone: hasOzone,
+          chlorineGenerator: hasChlorineGenerator,
+          waterfall: hasWaterfallService,
+        },
         city: selectedCity,
         months: selectedMonths,
         useFrequency,
@@ -437,12 +537,25 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
       const maxFlow = calculateMaxSimultaneousFlow();
       console.log({
         segment,
+        client: selectedClient,
+        city: selectedCityResidential,
         needsInstallation,
         needsProject,
+        shower1: {
+          flow: shower1Flow === "custom" ? shower1FlowCustom : shower1Flow,
+          time: shower1Time === "custom" ? shower1TimeCustom : shower1Time,
+        },
+        shower2: {
+          flow: shower2Flow === "custom" ? shower2FlowCustom : shower2Flow,
+          time: shower2Time === "custom" ? shower2TimeCustom : shower2Time,
+        },
         bathroom: {
           flow: bathroomFlow === "custom" ? bathroomFlowCustom : bathroomFlow,
           time: bathroomTime === "custom" ? bathroomTimeCustom : bathroomTime,
-          quantity: bathroomQuantity,
+        },
+        bathtub: {
+          flow: bathtubFlow === "custom" ? bathtubFlowCustom : bathtubFlow,
+          frequency: bathtubFrequency === "custom" ? bathtubFrequencyCustom : bathtubFrequency,
         },
         kitchen: {
           flow: kitchenFlow === "custom" ? kitchenFlowCustom : kitchenFlow,
@@ -454,11 +567,14 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
           time: laundryTime === "custom" ? laundryTimeCustom : laundryTime,
           quantity: laundryQuantity,
         },
-        bathtub: {
-          flow: bathtubFlow === "custom" ? bathtubFlowCustom : bathtubFlow,
-          frequency: bathtubFrequency === "custom" ? bathtubFrequencyCustom : bathtubFrequency,
-          quantity: bathtubQuantity,
-        },
+        networkCirculation: hasNetworkCirculation ? {
+          enabled: true,
+          quantity: networkCirculationQuantity,
+        } : { enabled: false },
+        pressurizationSystem: hasPressurizationSystem ? {
+          enabled: true,
+          simultaneousShowers: simultaneousShowers,
+        } : { enabled: false },
         maxSimultaneousFlow: maxFlow,
         maxSimultaneousFlowPerHour: maxFlow * 60,
       });
@@ -510,37 +626,64 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
     if (segment === "piscina") {
       return (
         <div className="space-y-6 p-6">
-          {/* Seção 0: Serviços Adicionais */}
+          {/* Seção 0: Cliente */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold mb-2">Serviços Adicionais</h3>
+              <h3 className="text-lg font-semibold mb-2">Cliente</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Selecione os serviços adicionais necessários
+                Selecione o cliente para esta proposta
               </p>
             </div>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
-                <Checkbox
-                  id="installation"
-                  checked={needsInstallation}
-                  onCheckedChange={(checked) => setNeedsInstallation(checked as boolean)}
-                />
-                <Label htmlFor="installation" className="cursor-pointer font-semibold">
-                  🔧 Serviço de Instalação
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
-                <Checkbox
-                  id="project"
-                  checked={needsProject}
-                  onCheckedChange={(checked) => setNeedsProject(checked as boolean)}
-                />
-                <Label htmlFor="project" className="cursor-pointer font-semibold">
-                  📐 Projetos
-                </Label>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="client">Cliente *</Label>
+              <Popover open={clientOpen} onOpenChange={setClientOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={clientOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedClient
+                      ? mockClients.find((client) => client.id === selectedClient)?.name
+                      : "Selecione o cliente..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Buscar cliente..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        {mockClients.map((client) => (
+                          <CommandItem
+                            key={client.id}
+                            value={`${client.name} ${client.email}`}
+                            onSelect={() => {
+                              setSelectedClient(client.id === selectedClient ? "" : client.id);
+                              setClientOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedClient === client.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span>{client.name}</span>
+                              <span className="text-xs text-muted-foreground">{client.email}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
-          </div>
+            </div>
 
           <Separator />
 
@@ -631,7 +774,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                     </SelectItem>
                 </SelectContent>
               </Select>
-              </div>
+            </div>
 
               <div className="space-y-2">
                 <Label htmlFor="temp">Temperatura Desejada (°C) *</Label>
@@ -654,8 +797,8 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                     <p className="text-xs text-red-800 dark:text-red-200 mt-1">
                       Fator de perda adicional será calculado: {((parseFloat(desiredTemp) - 31) * 0.15).toFixed(2)} 
                       {' '}({parseFloat(desiredTemp) - 31} graus × 1,15)
-                    </p>
-                  </div>
+                      </p>
+                    </div>
                 )}
               </div>
             </div>
@@ -1079,6 +1222,103 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
               </>
             )}
           </div>
+
+          <Separator />
+
+          {/* Seção 8: Serviços Adicionais */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">8. Serviços Adicionais</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Selecione os serviços adicionais necessários
+              </p>
+            </div>
+            <div className="space-y-3">
+              {/* Projetos */}
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
+                <Checkbox
+                  id="project"
+                  checked={needsProject}
+                  onCheckedChange={(checked) => setNeedsProject(checked as boolean)}
+                />
+                <Label htmlFor="project" className="cursor-pointer font-semibold">
+                  📐 Projetos
+                </Label>
+              </div>
+
+              {/* Serviço de Instalação */}
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+                <Checkbox
+                  id="installation"
+                  checked={needsInstallation}
+                  onCheckedChange={(checked) => setNeedsInstallation(checked as boolean)}
+                />
+                <Label htmlFor="installation" className="cursor-pointer font-semibold">
+                  🔧 Serviço de Instalação
+                </Label>
+              </div>
+
+              {/* Sistema de Filtragem */}
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
+                <Checkbox
+                  id="filtration-system"
+                  checked={hasFiltrationSystem}
+                  onCheckedChange={(checked) => setHasFiltrationSystem(checked as boolean)}
+                />
+                <Label htmlFor="filtration-system" className="cursor-pointer font-semibold">
+                  🔄 Sistema de Filtragem
+                </Label>
+              </div>
+
+              {/* Iluminação */}
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950">
+                <Checkbox
+                  id="lighting"
+                  checked={hasLighting}
+                  onCheckedChange={(checked) => setHasLighting(checked as boolean)}
+                />
+                <Label htmlFor="lighting" className="cursor-pointer font-semibold">
+                  💡 Iluminação
+                </Label>
+              </div>
+
+              {/* Ozônio */}
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-cyan-50 to-teal-50 dark:from-cyan-950 dark:to-teal-950">
+                <Checkbox
+                  id="ozone"
+                  checked={hasOzone}
+                  onCheckedChange={(checked) => setHasOzone(checked as boolean)}
+                />
+                <Label htmlFor="ozone" className="cursor-pointer font-semibold">
+                  ⚡ Ozônio
+                </Label>
+              </div>
+
+              {/* Gerador de Cloro */}
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950">
+                <Checkbox
+                  id="chlorine-generator"
+                  checked={hasChlorineGenerator}
+                  onCheckedChange={(checked) => setHasChlorineGenerator(checked as boolean)}
+                />
+                <Label htmlFor="chlorine-generator" className="cursor-pointer font-semibold">
+                  🧪 Gerador de Cloro
+                </Label>
+              </div>
+
+              {/* Cascata */}
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950 dark:to-violet-950">
+                <Checkbox
+                  id="waterfall-service"
+                  checked={hasWaterfallService}
+                  onCheckedChange={(checked) => setHasWaterfallService(checked as boolean)}
+                />
+                <Label htmlFor="waterfall-service" className="cursor-pointer font-semibold">
+                  🌊 Cascata
+                </Label>
+              </div>
+            </div>
+          </div>
         </div>
       );
     }
@@ -1087,104 +1327,339 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
     if (segment === "residencial") {
       return (
         <div className="space-y-6 p-6">
-          {/* Seção 0: Serviços Adicionais */}
+          {/* Seção 0: Cliente */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold mb-2">Serviços Adicionais</h3>
+              <h3 className="text-lg font-semibold mb-2">Cliente</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Selecione os serviços adicionais necessários
+                Selecione o cliente para esta proposta
               </p>
             </div>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
-                <Checkbox
-                  id="installation-res"
-                  checked={needsInstallation}
-                  onCheckedChange={(checked) => setNeedsInstallation(checked as boolean)}
-                />
-                <Label htmlFor="installation-res" className="cursor-pointer font-semibold">
-                  🔧 Serviço de Instalação
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
-                <Checkbox
-                  id="project-res"
-                  checked={needsProject}
-                  onCheckedChange={(checked) => setNeedsProject(checked as boolean)}
-                />
-                <Label htmlFor="project-res" className="cursor-pointer font-semibold">
-                  📐 Projetos
-                </Label>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="client-res">Cliente *</Label>
+              <Popover open={clientOpen} onOpenChange={setClientOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={clientOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedClient
+                      ? mockClients.find((client) => client.id === selectedClient)?.name
+                      : "Selecione o cliente..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Buscar cliente..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        {mockClients.map((client) => (
+                          <CommandItem
+                            key={client.id}
+                            value={`${client.name} ${client.email}`}
+                            onSelect={() => {
+                              setSelectedClient(client.id === selectedClient ? "" : client.id);
+                              setClientOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedClient === client.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span>{client.name}</span>
+                              <span className="text-xs text-muted-foreground">{client.email}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Seção 0.5: Cidade */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Cidade</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Selecione a cidade para buscar dados climáticos (Fonte: NASA)
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="city-res">Cidade / Estado *</Label>
+              <Select value={selectedCityResidential} onValueChange={setSelectedCityResidential}>
+                <SelectTrigger id="city-res">
+                  <SelectValue placeholder="Selecione a cidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockCities.map((city) => (
+                    <SelectItem key={`${city.city}-${city.state}`} value={`${city.city}-${city.state}`}>
+                      {city.city} - {city.state}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-2">
+                Dados climáticos incluem: Temperatura média mensal, Velocidade do vento, Radiação solar diária
+              </p>
             </div>
           </div>
 
           <Separator />
 
           {/* Seção 1: Banheiros */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold mb-2">1. Banheiros</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Configure a vazão e tempo de utilização das torneiras dos banheiros
+                Configure os equipamentos do ambiente banheiro
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="bathroom-flow">Vazão das Torneiras (L/min) *</Label>
-                <Select value={bathroomFlow} onValueChange={setBathroomFlow}>
-                  <SelectTrigger id="bathroom-flow">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="4">4 L/min</SelectItem>
-                    <SelectItem value="6">6 L/min (Padrão)</SelectItem>
-                    <SelectItem value="custom">Digitar vazão</SelectItem>
-                  </SelectContent>
-                </Select>
-                {bathroomFlow === "custom" && (
-                  <Input
-                    type="number"
-                    step="0.1"
-                    placeholder="Digite a vazão"
-                    value={bathroomFlowCustom}
-                    onChange={(e) => setBathroomFlowCustom(e.target.value)}
-                  />
-                )}
+
+            {/* Chuveiro 01 */}
+            <div className="space-y-4 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950">
+              <h4 className="font-semibold text-base mb-3">🚿 Chuveiro 01</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="shower1-flow">Vazão (L/min) *</Label>
+                  <div className="flex gap-2">
+                    <Select value={shower1Flow} onValueChange={setShower1Flow}>
+                      <SelectTrigger id="shower1-flow" className="flex-1">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="4">4 L/min</SelectItem>
+                        <SelectItem value="6">6 L/min (Padrão)</SelectItem>
+                        <SelectItem value="custom">Digitar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {shower1Flow === "custom" && (
+                      <Input
+                        type="number"
+                        step="0.1"
+                        placeholder="L/min"
+                        value={shower1FlowCustom}
+                        onChange={(e) => setShower1FlowCustom(e.target.value)}
+                        className="w-32"
+                      />
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shower1-time">Tempo de Utilização (min) *</Label>
+                  <div className="flex gap-2">
+                    <Select value={shower1Time} onValueChange={setShower1Time}>
+                      <SelectTrigger id="shower1-time" className="flex-1">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="4">4 min</SelectItem>
+                        <SelectItem value="6">6 min</SelectItem>
+                        <SelectItem value="8">8 min (Padrão)</SelectItem>
+                        <SelectItem value="10">10 min</SelectItem>
+                        <SelectItem value="custom">Digitar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {shower1Time === "custom" && (
+                      <Input
+                        type="number"
+                        step="0.1"
+                        placeholder="min"
+                        value={shower1TimeCustom}
+                        onChange={(e) => setShower1TimeCustom(e.target.value)}
+                        className="w-32"
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="bathroom-time">Tempo de Utilização (min) *</Label>
-                <Select value={bathroomTime} onValueChange={setBathroomTime}>
-                  <SelectTrigger id="bathroom-time">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="4">4 min</SelectItem>
-                    <SelectItem value="6">6 min</SelectItem>
-                    <SelectItem value="8">8 min (Padrão)</SelectItem>
-                    <SelectItem value="10">10 min</SelectItem>
-                    <SelectItem value="custom">Digitar tempo</SelectItem>
-                  </SelectContent>
-                </Select>
-                {bathroomTime === "custom" && (
-                  <Input
-                    type="number"
-                    step="0.1"
-                    placeholder="Digite o tempo"
-                    value={bathroomTimeCustom}
-                    onChange={(e) => setBathroomTimeCustom(e.target.value)}
-                  />
-                )}
+            </div>
+
+            {/* Chuveiro 02 */}
+            <div className="space-y-4 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950">
+              <h4 className="font-semibold text-base mb-3">🚿 Chuveiro 02</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="shower2-flow">Vazão (L/min) *</Label>
+                  <div className="flex gap-2">
+                    <Select value={shower2Flow} onValueChange={setShower2Flow}>
+                      <SelectTrigger id="shower2-flow" className="flex-1">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="4">4 L/min</SelectItem>
+                        <SelectItem value="6">6 L/min (Padrão)</SelectItem>
+                        <SelectItem value="custom">Digitar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {shower2Flow === "custom" && (
+                      <Input
+                        type="number"
+                        step="0.1"
+                        placeholder="L/min"
+                        value={shower2FlowCustom}
+                        onChange={(e) => setShower2FlowCustom(e.target.value)}
+                        className="w-32"
+                      />
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shower2-time">Tempo de Utilização (min) *</Label>
+                  <div className="flex gap-2">
+                    <Select value={shower2Time} onValueChange={setShower2Time}>
+                      <SelectTrigger id="shower2-time" className="flex-1">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="4">4 min</SelectItem>
+                        <SelectItem value="6">6 min</SelectItem>
+                        <SelectItem value="8">8 min (Padrão)</SelectItem>
+                        <SelectItem value="10">10 min</SelectItem>
+                        <SelectItem value="custom">Digitar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {shower2Time === "custom" && (
+                      <Input
+                        type="number"
+                        step="0.1"
+                        placeholder="min"
+                        value={shower2TimeCustom}
+                        onChange={(e) => setShower2TimeCustom(e.target.value)}
+                        className="w-32"
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="bathroom-qty">Quantidade *</Label>
-                <Input
-                  id="bathroom-qty"
-                  type="number"
-                  min="1"
-                  value={bathroomQuantity}
-                  onChange={(e) => setBathroomQuantity(parseInt(e.target.value) || 1)}
-                />
+            </div>
+
+            {/* Torneiras Banheiro */}
+            <div className="space-y-4 p-4 rounded-lg border-2 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
+              <h4 className="font-semibold text-base mb-3">💧 Torneiras</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bathroom-flow">Vazão (L/min) *</Label>
+                  <div className="flex gap-2">
+                    <Select value={bathroomFlow} onValueChange={setBathroomFlow}>
+                      <SelectTrigger id="bathroom-flow" className="flex-1">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="4">4 L/min</SelectItem>
+                        <SelectItem value="6">6 L/min (Padrão)</SelectItem>
+                        <SelectItem value="custom">Digitar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {bathroomFlow === "custom" && (
+                      <Input
+                        type="number"
+                        step="0.1"
+                        placeholder="L/min"
+                        value={bathroomFlowCustom}
+                        onChange={(e) => setBathroomFlowCustom(e.target.value)}
+                        className="w-32"
+                      />
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bathroom-time">Tempo de Utilização (min) *</Label>
+                  <div className="flex gap-2">
+                    <Select value={bathroomTime} onValueChange={setBathroomTime}>
+                      <SelectTrigger id="bathroom-time" className="flex-1">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="4">4 min</SelectItem>
+                        <SelectItem value="6">6 min</SelectItem>
+                        <SelectItem value="8">8 min (Padrão)</SelectItem>
+                        <SelectItem value="10">10 min</SelectItem>
+                        <SelectItem value="custom">Digitar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {bathroomTime === "custom" && (
+                      <Input
+                        type="number"
+                        step="0.1"
+                        placeholder="min"
+                        value={bathroomTimeCustom}
+                        onChange={(e) => setBathroomTimeCustom(e.target.value)}
+                        className="w-32"
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Banheira */}
+            <div className="space-y-4 p-4 rounded-lg border-2 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
+              <h4 className="font-semibold text-base mb-3">🛁 Banheira</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bathtub-flow">Vazão (L/min) *</Label>
+                  <div className="flex gap-2">
+                    <Select value={bathtubFlow} onValueChange={setBathtubFlow}>
+                      <SelectTrigger id="bathtub-flow" className="flex-1">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="250">250 L/min</SelectItem>
+                        <SelectItem value="300">300 L/min</SelectItem>
+                        <SelectItem value="350">350 L/min (Padrão)</SelectItem>
+                        <SelectItem value="custom">Digitar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {bathtubFlow === "custom" && (
+                      <Input
+                        type="number"
+                        step="0.1"
+                        placeholder="L/min"
+                        value={bathtubFlowCustom}
+                        onChange={(e) => setBathtubFlowCustom(e.target.value)}
+                        className="w-32"
+                      />
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bathtub-freq">Frequência de Uso (min) *</Label>
+                  <div className="flex gap-2">
+                    <Select value={bathtubFrequency} onValueChange={setBathtubFrequency}>
+                      <SelectTrigger id="bathtub-freq" className="flex-1">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 min</SelectItem>
+                        <SelectItem value="2">2 min (Padrão)</SelectItem>
+                        <SelectItem value="3">3 min</SelectItem>
+                        <SelectItem value="custom">Digitar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {bathtubFrequency === "custom" && (
+                      <Input
+                        type="number"
+                        step="0.1"
+                        placeholder="min"
+                        value={bathtubFrequencyCustom}
+                        onChange={(e) => setBathtubFrequencyCustom(e.target.value)}
+                        className="w-32"
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1330,110 +1805,102 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
 
           <Separator />
 
-          {/* Seção 4: Banheira */}
+          {/* Seção 5: Serviços Adicionais */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold mb-2">4. Banheira</h3>
+              <h3 className="text-lg font-semibold mb-2">5. Serviços Adicionais</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Configure a vazão e frequência de uso da banheira
+                Selecione os adicionais necessários
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="bathtub-flow">Vazão (L/min) *</Label>
-                <Select value={bathtubFlow} onValueChange={setBathtubFlow}>
-                  <SelectTrigger id="bathtub-flow">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="250">250 L/min</SelectItem>
-                    <SelectItem value="300">300 L/min</SelectItem>
-                    <SelectItem value="350">350 L/min (Padrão)</SelectItem>
-                    <SelectItem value="custom">Digitar vazão</SelectItem>
-                  </SelectContent>
-                </Select>
-                {bathtubFlow === "custom" && (
-                  <Input
-                    type="number"
-                    step="0.1"
-                    placeholder="Digite a vazão"
-                    value={bathtubFlowCustom}
-                    onChange={(e) => setBathtubFlowCustom(e.target.value)}
-                  />
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bathtub-freq">Frequência de Uso (min) *</Label>
-                <Select value={bathtubFrequency} onValueChange={setBathtubFrequency}>
-                  <SelectTrigger id="bathtub-freq">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 min</SelectItem>
-                    <SelectItem value="2">2 min (Padrão)</SelectItem>
-                    <SelectItem value="3">3 min</SelectItem>
-                    <SelectItem value="custom">Digitar frequência</SelectItem>
-                  </SelectContent>
-                </Select>
-                {bathtubFrequency === "custom" && (
-                  <Input
-                    type="number"
-                    step="0.1"
-                    placeholder="Digite a frequência"
-                    value={bathtubFrequencyCustom}
-                    onChange={(e) => setBathtubFrequencyCustom(e.target.value)}
-                  />
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="bathtub-qty">Quantidade *</Label>
-                <Input
-                  id="bathtub-qty"
-                  type="number"
-                  min="1"
-                  value={bathtubQuantity}
-                  onChange={(e) => setBathtubQuantity(parseInt(e.target.value) || 1)}
+            <div className="space-y-3">
+              {/* Projetos */}
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
+                <Checkbox
+                  id="project-res"
+                  checked={needsProject}
+                  onCheckedChange={(checked) => setNeedsProject(checked as boolean)}
                 />
+                <Label htmlFor="project-res" className="cursor-pointer font-semibold">
+                  📐 Projetos
+                </Label>
+              </div>
+
+              {/* Serviços de Instalação */}
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+                <Checkbox
+                  id="installation-res"
+                  checked={needsInstallation}
+                  onCheckedChange={(checked) => setNeedsInstallation(checked as boolean)}
+                />
+                <Label htmlFor="installation-res" className="cursor-pointer font-semibold">
+                  🔧 Serviços de Instalação
+                </Label>
+              </div>
+
+              {/* Sistema de Circulação de Rede */}
+              <div className="p-4 rounded-lg border-2 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
+                <div className="flex items-center space-x-2 mb-3">
+                  <Checkbox
+                    id="network-circulation"
+                    checked={hasNetworkCirculation}
+                    onCheckedChange={(checked) => setHasNetworkCirculation(checked as boolean)}
+                  />
+                  <Label htmlFor="network-circulation" className="cursor-pointer font-semibold">
+                    🔄 Sistema de Circulação de Rede
+                  </Label>
+                </div>
+                {hasNetworkCirculation && (
+                  <div className="ml-6 space-y-2">
+                    <Label htmlFor="network-circulation-qty">Quantidade *</Label>
+                    <Input
+                      id="network-circulation-qty"
+                      type="number"
+                      min="1"
+                      placeholder="Digite a quantidade"
+                      value={networkCirculationQuantity}
+                      onChange={(e) => setNetworkCirculationQuantity(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Sistema de Pressurização */}
+              <div className="p-4 rounded-lg border-2 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950">
+                <div className="flex items-center space-x-2 mb-3">
+                  <Checkbox
+                    id="pressurization-system"
+                    checked={hasPressurizationSystem}
+                    onCheckedChange={(checked) => setHasPressurizationSystem(checked as boolean)}
+                  />
+                  <Label htmlFor="pressurization-system" className="cursor-pointer font-semibold">
+                    💧 Sistema de Pressurização
+                  </Label>
+                </div>
+                {hasPressurizationSystem && (
+                  <div className="ml-6 space-y-4 p-4 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+                    <div className="space-y-2">
+                      <Label htmlFor="simultaneous-showers" className="text-sm font-medium">
+                        Simultaneidade dos Pontos
+                      </Label>
+                      <Label htmlFor="simultaneous-showers-qty" className="text-xs text-muted-foreground block">
+                        Quantidade de chuveiros simultâneos
+                      </Label>
+                      <Input
+                        id="simultaneous-showers-qty"
+                        type="number"
+                        min="1"
+                        placeholder="Digite a quantidade de chuveiros simultâneos"
+                        value={simultaneousShowers}
+                        onChange={(e) => setSimultaneousShowers(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-
-          <Separator />
-
-          {/* Seção 5: Resultado do Cálculo */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">5. Resultado do Dimensionamento</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Cálculo da vazão máxima simultânea para dimensionamento do equipamento
-                </p>
-              </div>
-              <Button onClick={calculateMaxSimultaneousFlow} variant="default">
-                Calcular Vazão Máxima
-              </Button>
-            </div>
-
-            {maxSimultaneousFlow > 0 && (
-              <div className="p-6 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-2 border-blue-200 dark:border-blue-800">
-                <h4 className="font-semibold text-lg mb-4 text-blue-900 dark:text-blue-100">
-                  📊 Vazão Máxima Simultânea Calculada
-                </h4>
-                <div className="text-center p-6 bg-white dark:bg-gray-900 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-2">Vazão Máxima Simultânea</p>
-                  <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                    {maxSimultaneousFlow.toFixed(2)} L/min
-                  </p>
-                  <p className="text-lg font-semibold text-blue-700 dark:text-blue-300 mt-2">
-                    {maxSimultaneousFlow > 0 ? (maxSimultaneousFlow * 60).toFixed(2) : 0} L/h
-                  </p>
-                </div>
-                <div className="mt-4 text-xs space-y-1 text-blue-800 dark:text-blue-200">
-                  <p>• Este valor representa a vazão máxima simultânea considerando todos os pontos de consumo</p>
-                  <p>• Utilize este valor para dimensionar o equipamento de aquecimento adequado</p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       );
