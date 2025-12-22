@@ -104,10 +104,17 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
   // Cliente (para ambos os segmentos)
   const [selectedClient, setSelectedClient] = useState("");
   const [clientOpen, setClientOpen] = useState(false);
+  const [isNewClient, setIsNewClient] = useState(false);
+  const [newClientName, setNewClientName] = useState("");
+  const [newClientPhone, setNewClientPhone] = useState("");
 
   // Serviços Adicionais
-  const [needsInstallation, setNeedsInstallation] = useState(false);
-  const [needsProject, setNeedsProject] = useState(false);
+  const [needsInstallation, setNeedsInstallation] = useState(true);
+  const [needsProject, setNeedsProject] = useState(true);
+  
+  // Temperatura de Consumo (Piscina)
+  const [consumptionTemp, setConsumptionTemp] = useState("40");
+  const [consumptionTempCustom, setConsumptionTempCustom] = useState("");
   
   // Serviços Adicionais - Piscina
   const [hasFiltrationSystem, setHasFiltrationSystem] = useState(false);
@@ -137,10 +144,9 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
   const [useFrequency, setUseFrequency] = useState("");
   const [desiredTemp, setDesiredTemp] = useState("");
 
-  // Passo 4: Tipo de Ambiente
+  // Passo 4: Tipo de Ambiente (movido para Características Especiais)
   const [isEnclosed, setIsEnclosed] = useState(false);
   const [enclosedArea, setEnclosedArea] = useState("");
-  const [poolSurfaceArea, setPoolSurfaceArea] = useState("");
   const [isSuspended, setIsSuspended] = useState(false);
 
   // Passo 5: Áreas da Piscina
@@ -205,6 +211,14 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
   const [maxSimultaneousFlow, setMaxSimultaneousFlow] = useState(0);
 
   // Funções de cálculo
+  const calculatePoolSurfaceArea = () => {
+    return poolAreas.reduce((total, area) => {
+      const length = parseFloat(area.length) || 0;
+      const width = parseFloat(area.width) || 0;
+      return total + (length * width);
+    }, 0);
+  };
+
   const getWindFactor = (windSpeed: number) => {
     if (windSpeed <= 18) return 1.15;
     if (windSpeed <= 35) return 1.25;
@@ -390,7 +404,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
 
     // Chuveiro 01
     if (shower1Flow || shower1FlowCustom) {
-      const flow = shower1Flow === "custom" ? parseFloat(shower1FlowCustom) : parseFloat(shower1Flow);
+      const flow = shower1FlowCustom ? parseFloat(shower1FlowCustom) : parseFloat(shower1Flow);
       if (!isNaN(flow) && flow > 0) {
         flows.push(flow);
       }
@@ -398,7 +412,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
 
     // Chuveiro 02
     if (shower2Flow || shower2FlowCustom) {
-      const flow = shower2Flow === "custom" ? parseFloat(shower2FlowCustom) : parseFloat(shower2Flow);
+      const flow = shower2FlowCustom ? parseFloat(shower2FlowCustom) : parseFloat(shower2Flow);
       if (!isNaN(flow) && flow > 0) {
         flows.push(flow);
       }
@@ -406,7 +420,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
 
     // Torneiras Banheiro
     if (bathroomFlow || bathroomFlowCustom) {
-      const flow = bathroomFlow === "custom" ? parseFloat(bathroomFlowCustom) : parseFloat(bathroomFlow);
+      const flow = bathroomFlowCustom ? parseFloat(bathroomFlowCustom) : parseFloat(bathroomFlow);
       if (!isNaN(flow) && flow > 0) {
         flows.push(flow);
       }
@@ -414,7 +428,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
 
     // Banheira
     if (bathtubFlow || bathtubFlowCustom) {
-      const flow = bathtubFlow === "custom" ? parseFloat(bathtubFlowCustom) : parseFloat(bathtubFlow);
+      const flow = bathtubFlowCustom ? parseFloat(bathtubFlowCustom) : parseFloat(bathtubFlow);
       if (!isNaN(flow) && flow > 0) {
         flows.push(flow);
       }
@@ -422,7 +436,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
 
     // Cozinha
     if (kitchenFlow || kitchenFlowCustom) {
-      const flow = kitchenFlow === "custom" ? parseFloat(kitchenFlowCustom) : parseFloat(kitchenFlow);
+      const flow = kitchenFlowCustom ? parseFloat(kitchenFlowCustom) : parseFloat(kitchenFlow);
       if (!isNaN(flow) && kitchenQuantity > 0) {
         flows.push(flow * kitchenQuantity);
       }
@@ -430,7 +444,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
 
     // Lavanderia
     if (laundryFlow || laundryFlowCustom) {
-      const flow = laundryFlow === "custom" ? parseFloat(laundryFlowCustom) : parseFloat(laundryFlow);
+      const flow = laundryFlowCustom ? parseFloat(laundryFlowCustom) : parseFloat(laundryFlow);
       if (!isNaN(flow) && laundryQuantity > 0) {
         flows.push(flow * laundryQuantity);
       }
@@ -446,8 +460,13 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
     setSegment(null);
     setSelectedClient("");
     setClientOpen(false);
-    setNeedsInstallation(false);
-    setNeedsProject(false);
+    setIsNewClient(false);
+    setNewClientName("");
+    setNewClientPhone("");
+    setNeedsInstallation(true);
+    setNeedsProject(true);
+    setConsumptionTemp("40");
+    setConsumptionTempCustom("");
     setHasFiltrationSystem(false);
     setHasLighting(false);
     setHasOzone(false);
@@ -460,7 +479,6 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
     setDesiredTemp("");
     setIsEnclosed(false);
     setEnclosedArea("");
-    setPoolSurfaceArea("");
     setIsSuspended(false);
     setPoolAreas([{ id: 1, length: "", width: "", depth: "" }]);
     setHasWaterfall(false);
@@ -511,9 +529,16 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
     if (segment === "piscina") {
     console.log({
         segment,
-        client: selectedClient,
+        client: isNewClient 
+          ? { 
+              isNew: true, 
+              name: newClientName, 
+              phone: newClientPhone 
+            }
+          : selectedClient,
         needsInstallation,
         needsProject,
+        consumptionTemp: consumptionTempCustom || consumptionTemp,
         additionalServices: {
           filtrationSystem: hasFiltrationSystem,
           lighting: hasLighting,
@@ -527,7 +552,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
         desiredTemp,
         isEnclosed,
         enclosedArea,
-        poolSurfaceArea,
+        poolSurfaceArea: calculatePoolSurfaceArea(),
         isSuspended,
         poolAreas,
         waterfall: hasWaterfall ? { height: waterfallHeight, width: waterfallWidth } : null,
@@ -537,34 +562,40 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
       const maxFlow = calculateMaxSimultaneousFlow();
       console.log({
         segment,
-        client: selectedClient,
+        client: isNewClient 
+          ? { 
+              isNew: true, 
+              name: newClientName, 
+              phone: newClientPhone 
+            }
+          : selectedClient,
         city: selectedCityResidential,
         needsInstallation,
         needsProject,
         shower1: {
-          flow: shower1Flow === "custom" ? shower1FlowCustom : shower1Flow,
-          time: shower1Time === "custom" ? shower1TimeCustom : shower1Time,
+          flow: shower1FlowCustom || shower1Flow,
+          time: shower1TimeCustom || shower1Time,
         },
         shower2: {
-          flow: shower2Flow === "custom" ? shower2FlowCustom : shower2Flow,
-          time: shower2Time === "custom" ? shower2TimeCustom : shower2Time,
+          flow: shower2FlowCustom || shower2Flow,
+          time: shower2TimeCustom || shower2Time,
         },
         bathroom: {
-          flow: bathroomFlow === "custom" ? bathroomFlowCustom : bathroomFlow,
-          time: bathroomTime === "custom" ? bathroomTimeCustom : bathroomTime,
+          flow: bathroomFlowCustom || bathroomFlow,
+          time: bathroomTimeCustom || bathroomTime,
         },
         bathtub: {
-          flow: bathtubFlow === "custom" ? bathtubFlowCustom : bathtubFlow,
-          frequency: bathtubFrequency === "custom" ? bathtubFrequencyCustom : bathtubFrequency,
+          flow: bathtubFlowCustom || bathtubFlow,
+          frequency: bathtubFrequencyCustom || bathtubFrequency,
         },
         kitchen: {
-          flow: kitchenFlow === "custom" ? kitchenFlowCustom : kitchenFlow,
-          time: kitchenTime === "custom" ? kitchenTimeCustom : kitchenTime,
+          flow: kitchenFlowCustom || kitchenFlow,
+          time: kitchenTimeCustom || kitchenTime,
           quantity: kitchenQuantity,
         },
         laundry: {
-          flow: laundryFlow === "custom" ? laundryFlowCustom : laundryFlow,
-          time: laundryTime === "custom" ? laundryTimeCustom : laundryTime,
+          flow: laundryFlowCustom || laundryFlow,
+          time: laundryTimeCustom || laundryTime,
           quantity: laundryQuantity,
         },
         networkCirculation: hasNetworkCirculation ? {
@@ -628,14 +659,8 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
         <div className="space-y-6 p-6">
           {/* Seção 0: Cliente */}
           <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Cliente</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Selecione o cliente para esta proposta
-              </p>
-            </div>
             <div className="space-y-2">
-              <Label htmlFor="client">Cliente *</Label>
+              <Label>Cliente:</Label>
               <Popover open={clientOpen} onOpenChange={setClientOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -644,7 +669,9 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                     aria-expanded={clientOpen}
                     className="w-full justify-between"
                   >
-                    {selectedClient
+                    {isNewClient
+                      ? newClientName || "Novo cliente..."
+                      : selectedClient
                       ? mockClients.find((client) => client.id === selectedClient)?.name
                       : "Selecione o cliente..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -656,12 +683,28 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                     <CommandList>
                       <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
                       <CommandGroup>
+                        <CommandItem
+                          value="novo-cliente"
+                          onSelect={() => {
+                            setIsNewClient(true);
+                            setSelectedClient("");
+                            setClientOpen(false);
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">➕</span>
+                            <span className="font-semibold">Cadastrar novo cliente</span>
+                          </div>
+                        </CommandItem>
                         {mockClients.map((client) => (
                           <CommandItem
                             key={client.id}
                             value={`${client.name} ${client.email}`}
                             onSelect={() => {
                               setSelectedClient(client.id === selectedClient ? "" : client.id);
+                              setIsNewClient(false);
+                              setNewClientName("");
+                              setNewClientPhone("");
                               setClientOpen(false);
                             }}
                           >
@@ -682,6 +725,100 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                   </Command>
                 </PopoverContent>
               </Popover>
+              
+              {isNewClient && (
+                <div className="space-y-3 mt-4 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-client-name">Nome do Cliente *</Label>
+                    <Input
+                      id="new-client-name"
+                      placeholder="Digite o nome do cliente"
+                      value={newClientName}
+                      onChange={(e) => setNewClientName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-client-phone">Telefone *</Label>
+                    <Input
+                      id="new-client-phone"
+                      placeholder="(00) 00000-0000"
+                      value={newClientPhone}
+                      onChange={(e) => setNewClientPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+            </div>
+
+          <Separator />
+
+          {/* Serviços (antes do passo 1) */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Serviços</h3>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
+                <Checkbox
+                  id="project-piscina"
+                  checked={needsProject}
+                  onCheckedChange={(checked) => setNeedsProject(checked as boolean)}
+                />
+                <Label htmlFor="project-piscina" className="cursor-pointer font-semibold">
+                  📐 Projetos
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+                <Checkbox
+                  id="installation-piscina"
+                  checked={needsInstallation}
+                  onCheckedChange={(checked) => setNeedsInstallation(checked as boolean)}
+                />
+                <Label htmlFor="installation-piscina" className="cursor-pointer font-semibold">
+                  🔧 Serviço de Instalação
+                </Label>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Seleção de Temperatura de Consumo */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Seleção Temperatura de Consumo</h3>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="consumption-temp">Temperatura de Consumo (°C) *</Label>
+              <div className="flex gap-2">
+                <Select 
+                  value={consumptionTemp} 
+                  onValueChange={(value) => {
+                    setConsumptionTemp(value);
+                    setConsumptionTempCustom("");
+                  }}
+                >
+                  <SelectTrigger id="consumption-temp" className="flex-1">
+                    <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="40">40°C (Pre-setada)</SelectItem>
+                </SelectContent>
+              </Select>
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="Ou digite"
+                  value={consumptionTempCustom}
+                  onChange={(e) => {
+                    setConsumptionTempCustom(e.target.value);
+                    if (e.target.value) setConsumptionTemp("");
+                  }}
+                  className="w-32"
+                />
+              </div>
             </div>
             </div>
 
@@ -690,13 +827,12 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
           {/* Seção 1: Local de Instalação */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold mb-2">1. Local de Instalação</h3>
+              <h3 className="text-lg font-semibold mb-2">Cidade / Estado</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Selecione a cidade para buscar dados climáticos (Fonte: NASA)
+                Selecione a cidade da instalacao dos equipamentos
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="city">Cidade / Estado *</Label>
               <Select value={selectedCity} onValueChange={setSelectedCity}>
                 <SelectTrigger id="city">
                   <SelectValue placeholder="Selecione a cidade" />
@@ -760,18 +896,8 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                     <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="diario">
-                      <div className="flex flex-col">
-                        <span className="font-medium">Uso Diário</span>
-                        <span className="text-xs text-muted-foreground">Tempo para primeiro aquecimento: pode ser maior que 65 horas</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="esporadico">
-                      <div className="flex flex-col">
-                        <span className="font-medium">Uso Esporádico</span>
-                        <span className="text-xs text-muted-foreground">Tempo para primeiro aquecimento: pode ser menor que 24 horas</span>
-                      </div>
-                    </SelectItem>
+                    <SelectItem value="diario">Uso Diário</SelectItem>
+                    <SelectItem value="esporadico">Uso Esporádico</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -806,98 +932,15 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
 
           <Separator />
 
-          {/* Seção 4: Tipo de Ambiente */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">4. Tipo de Ambiente</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Características do local da piscina
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-4 p-4 rounded-lg border-2 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-950 dark:to-cyan-950">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="enclosed"
-                    checked={isEnclosed}
-                    onCheckedChange={(checked) => setIsEnclosed(checked as boolean)}
-                  />
-                  <Label htmlFor="enclosed" className="cursor-pointer font-semibold">
-                    🏠 Local Fechado
-                  </Label>
-                    </div>
-
-                {isEnclosed && (
-                  <div className="ml-6 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="enclosed-area">Área Total do Ambiente (m²) *</Label>
-                      <Input
-                          id="enclosed-area"
-                        type="number"
-                          step="0.01"
-                          placeholder="Ex: 240"
-                          value={enclosedArea}
-                          onChange={(e) => setEnclosedArea(e.target.value)}
-                      />
-                    </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="pool-surface">Área da Superfície da Piscina (m²) *</Label>
-                        <Input
-                          id="pool-surface"
-                          type="number"
-                          step="0.01"
-                          placeholder="Ex: 50"
-                          value={poolSurfaceArea}
-                          onChange={(e) => setPoolSurfaceArea(e.target.value)}
-                        />
-                    </div>
-                    </div>
-
-                    {enclosedArea && poolSurfaceArea && (
-                      <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900 border border-green-300 dark:border-green-700">
-                        <p className="text-xs font-semibold text-green-900 dark:text-green-100">
-                          ✅ Desumidificadores necessários:
-                        </p>
-                        <p className="text-sm font-bold text-green-900 dark:text-green-100 mt-1">
-                          {Math.ceil(Math.max(
-                            parseFloat(poolSurfaceArea) / 50,
-                            parseFloat(enclosedArea) / 240
-                          ))} máquina(s) KODI 120
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="p-4 rounded-lg border-2 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="suspended"
-                    checked={isSuspended}
-                    onCheckedChange={(checked) => setIsSuspended(checked as boolean)}
-                  />
-                  <Label htmlFor="suspended" className="cursor-pointer font-semibold">
-                    🏗️ Piscina Suspensa
-                  </Label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Seção 5: Dimensões das Áreas */}
+          {/* Seção 4: Dimensões das Áreas */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold mb-2">5. Dimensões da Piscina</h3>
-                <p className="text-sm text-muted-foreground">
+                <h3 className="text-lg font-semibold mb-2">4. Dimensões da Piscina</h3>
+                      <p className="text-sm text-muted-foreground">
                   Adicione as áreas da piscina (rasa, profunda, etc.)
-                </p>
-              </div>
+                      </p>
+                    </div>
               <Button variant="outline" size="sm" onClick={addPoolArea}>
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar Área
@@ -912,7 +955,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                 return (
                   <div key={area.id} className="p-4 rounded-lg border space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                         <h4 className="font-semibold">Área {index + 1}</h4>
                         {depth > 0 && (
                           <span className={`text-xs px-2 py-1 rounded-full ${
@@ -937,30 +980,27 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>Comprimento (m)</Label>
-                        <Input
-                          type="number"
+                      <Input
+                        type="number"
                           step="0.01"
-                          placeholder="Ex: 10"
                           value={area.length}
                           onChange={(e) => updatePoolArea(area.id, "length", e.target.value)}
-                        />
-              </div>
+                      />
+                    </div>
                       <div className="space-y-2">
                         <Label>Largura (m)</Label>
                         <Input
                           type="number"
                           step="0.01"
-                          placeholder="Ex: 5"
                           value={area.width}
                           onChange={(e) => updatePoolArea(area.id, "width", e.target.value)}
                         />
-                      </div>
+                    </div>
                       <div className="space-y-2">
                         <Label>Profundidade (m)</Label>
                         <Input
                           type="number"
                           step="0.01"
-                          placeholder="Ex: 1.5"
                           value={area.depth}
                           onChange={(e) => updatePoolArea(area.id, "depth", e.target.value)}
                         />
@@ -974,16 +1014,72 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
 
           <Separator />
 
-          {/* Seção 6: Características Especiais */}
+          {/* Seção 5: Características Especiais */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold mb-2">6. Características Especiais</h3>
+              <h3 className="text-lg font-semibold mb-2">5. Características Especiais</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Recursos adicionais da piscina
               </p>
             </div>
 
             <div className="space-y-4">
+              {/* Tipo de Ambiente */}
+              <div className="space-y-4 p-4 rounded-lg border-2 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-950 dark:to-cyan-950">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="enclosed"
+                    checked={isEnclosed}
+                    onCheckedChange={(checked) => setIsEnclosed(checked as boolean)}
+                  />
+                  <Label htmlFor="enclosed" className="cursor-pointer font-semibold">
+                    🏠 Local Fechado
+                  </Label>
+                </div>
+
+                {isEnclosed && (
+                  <div className="ml-6 space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="enclosed-area">Área Total do Ambiente (m²) *</Label>
+                      <Input
+                        id="enclosed-area"
+                        type="number"
+                        step="0.01"
+                        placeholder="Ex: 240"
+                        value={enclosedArea}
+                        onChange={(e) => setEnclosedArea(e.target.value)}
+                      />
+                    </div>
+
+                    {enclosedArea && poolAreas.some(area => area.length && area.width) && (
+                      <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900 border border-green-300 dark:border-green-700">
+                        <p className="text-xs font-semibold text-green-900 dark:text-green-100">
+                          ✅ Desumidificadores necessários:
+                        </p>
+                        <p className="text-sm font-bold text-green-900 dark:text-green-100 mt-1">
+                          {Math.ceil(Math.max(
+                            calculatePoolSurfaceArea() / 50,
+                            parseFloat(enclosedArea) / 240
+                          ))} máquina(s) KODI 120
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 rounded-lg border-2 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="suspended"
+                    checked={isSuspended}
+                    onCheckedChange={(checked) => setIsSuspended(checked as boolean)}
+                  />
+                  <Label htmlFor="suspended" className="cursor-pointer font-semibold">
+                    🏗️ Piscina Suspensa
+                  </Label>
+                </div>
+              </div>
               <div className="space-y-4 p-4 rounded-lg border bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -1084,180 +1180,15 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
 
           <Separator />
 
-          {/* Seção 7: Resultados e Seleção de Máquinas */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">7. Resultado do Dimensionamento</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Cálculo de carga térmica e sugestão de equipamentos
-                </p>
-            </div>
-              <Button onClick={calculateResults} variant="default">
-                Calcular Dimensionamento
-              </Button>
-            </div>
-
-            {thermalLoad > 0 && (
-              <>
-                {/* Resumo do Cálculo */}
-                <div className="p-6 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-2 border-blue-200 dark:border-blue-800">
-                  <h4 className="font-semibold text-lg mb-4 text-blue-900 dark:text-blue-100">
-                    📊 Capacidade Térmica Calculada
-                  </h4>
-                  <div className="text-center p-6 bg-white dark:bg-gray-900 rounded-lg">
-                    <p className="text-sm text-muted-foreground mb-2">Carga Térmica Total</p>
-                    <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                      {thermalLoad.toFixed(2)} kW
-                    </p>
-                  </div>
-                  <div className="mt-4 text-xs space-y-1 text-blue-800 dark:text-blue-200">
-                    <p>• Período de utilização: {selectedMonths.join(", ") || "Não selecionado"}</p>
-                    <p>• Temperatura desejada: {desiredTemp || "Não informada"}°C</p>
-                    <p>• Tempo de aquecimento inicial: {heatingTime.toFixed(1)} horas</p>
-                    <p>• Frequência: {useFrequency === "diario" ? "Uso Diário" : useFrequency === "esporadico" ? "Uso Esporádico" : "Não selecionada"}</p>
-                  </div>
-                </div>
-
-                {/* Máquinas Sugeridas */}
-                {selectedMachines.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-lg">Equipamentos Sugeridos</h4>
-                      <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                        selectedMonths.some(m => coldMonths.includes(m))
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                          : 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
-                      }`}>
-                        {selectedMonths.some(m => coldMonths.includes(m))
-                          ? 'Período Frio (26°C teste)'
-                          : 'Período Quente (15°C teste)'}
-              </span>
-            </div>
-
-                    {selectedMachines.map((machine, index) => (
-                      <div key={index} className="p-4 rounded-lg border-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <h5 className="font-bold text-lg text-green-900 dark:text-green-100">
-                              {machine.model}
-                            </h5>
-                            <p className="text-sm text-green-700 dark:text-green-300">
-                              Capacidade: {machine.capacity} kW | Vazão: {machine.flow} m³/h
-                            </p>
-          </div>
-                          <div className="flex items-center gap-3">
-                            <Label className="text-sm font-medium">Quantidade:</Label>
-                            <Input
-                              type="number"
-                              min="1"
-                              value={machine.quantity}
-                              onChange={(e) => updateMachineQuantity(index, parseInt(e.target.value) || 1)}
-                              className="w-20 text-center"
-                            />
-        </div>
-                        </div>
-                        <div className="p-3 rounded bg-green-100 dark:bg-green-900 text-xs space-y-1 text-green-800 dark:text-green-200">
-                          <p>• <strong>Capacidade total:</strong> {(machine.capacity * machine.quantity).toFixed(2)} kW</p>
-                          <p>• <strong>Vazão total:</strong> {(machine.flow * machine.quantity).toFixed(2)} m³/h</p>
-                          <p>• <strong>Acessório necessário:</strong> {machine.quantity}x Motobomba c/vazão {machine.flow}m³/h</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Recálculo de Tempo e Consumo */}
-                {heatingTime > 0 && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800">
-                      <h5 className="font-semibold text-sm mb-2 text-purple-900 dark:text-purple-100">
-                        ⏱️ Novo Tempo de Aquecimento
-                      </h5>
-                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                        {heatingTime.toFixed(1)}h
-                      </p>
-                      <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
-                        Tempo para o primeiro aquecimento
-                      </p>
-                    </div>
-
-                    <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800">
-                      <h5 className="font-semibold text-sm mb-2 text-amber-900 dark:text-amber-100">
-                        ⚡ Consumo Elétrico
-                      </h5>
-                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-                        Primeiro aquecimento:
-                      </p>
-                      <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
-                        {energyConsumption.initial.toFixed(2)} kWh
-                      </p>
-                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-200 mt-2">
-                        Estimativa diária:
-                      </p>
-                      <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
-                        {energyConsumption.daily.toFixed(2)} kWh
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Desumidificador (se aplicável) */}
-                {isEnclosed && enclosedArea && poolSurfaceArea && (
-                  <div className="p-4 rounded-lg bg-teal-50 dark:bg-teal-950 border-2 border-teal-300 dark:border-teal-700">
-                    <h5 className="font-semibold mb-2 text-teal-900 dark:text-teal-100">
-                      💨 Desumidificador de Ambiente
-                    </h5>
-                    <p className="text-sm text-teal-800 dark:text-teal-200">
-                      <strong>Quantidade necessária:</strong> {Math.ceil(Math.max(
-                        parseFloat(poolSurfaceArea) / 50,
-                        parseFloat(enclosedArea) / 240
-                      ))} máquina(s) KODI 120
-                    </p>
-                    <p className="text-xs text-teal-700 dark:text-teal-300 mt-1">
-                      Baseado em área de superfície ({poolSurfaceArea}m²) e área total ({enclosedArea}m²)
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          <Separator />
-
-          {/* Seção 8: Serviços Adicionais */}
+          {/* Seção 6: Serviços Adicionais */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold mb-2">8. Serviços Adicionais</h3>
+              <h3 className="text-lg font-semibold mb-2">6. Serviços Adicionais</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Selecione os serviços adicionais necessários
               </p>
             </div>
             <div className="space-y-3">
-              {/* Projetos */}
-              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
-                <Checkbox
-                  id="project"
-                  checked={needsProject}
-                  onCheckedChange={(checked) => setNeedsProject(checked as boolean)}
-                />
-                <Label htmlFor="project" className="cursor-pointer font-semibold">
-                  📐 Projetos
-                </Label>
-              </div>
-
-              {/* Serviço de Instalação */}
-              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
-                <Checkbox
-                  id="installation"
-                  checked={needsInstallation}
-                  onCheckedChange={(checked) => setNeedsInstallation(checked as boolean)}
-                />
-                <Label htmlFor="installation" className="cursor-pointer font-semibold">
-                  🔧 Serviço de Instalação
-                </Label>
-              </div>
-
               {/* Sistema de Filtragem */}
               <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
                 <Checkbox
@@ -1329,27 +1260,23 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
         <div className="space-y-6 p-6">
           {/* Seção 0: Cliente */}
           <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Cliente</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Selecione o cliente para esta proposta
-              </p>
-            </div>
             <div className="space-y-2">
-              <Label htmlFor="client-res">Cliente *</Label>
+              <Label>Cliente:</Label>
               <Popover open={clientOpen} onOpenChange={setClientOpen}>
                 <PopoverTrigger asChild>
-                  <Button
+                    <Button
                     variant="outline"
                     role="combobox"
                     aria-expanded={clientOpen}
                     className="w-full justify-between"
                   >
-                    {selectedClient
+                    {isNewClient
+                      ? newClientName || "Novo cliente..."
+                      : selectedClient
                       ? mockClients.find((client) => client.id === selectedClient)?.name
                       : "Selecione o cliente..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
+                    </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-full p-0">
                   <Command>
@@ -1357,12 +1284,28 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                     <CommandList>
                       <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
                       <CommandGroup>
+                        <CommandItem
+                          value="novo-cliente"
+                          onSelect={() => {
+                            setIsNewClient(true);
+                            setSelectedClient("");
+                            setClientOpen(false);
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">➕</span>
+                            <span className="font-semibold">Cadastrar novo cliente</span>
+                  </div>
+                        </CommandItem>
                         {mockClients.map((client) => (
                           <CommandItem
                             key={client.id}
                             value={`${client.name} ${client.email}`}
                             onSelect={() => {
                               setSelectedClient(client.id === selectedClient ? "" : client.id);
+                              setIsNewClient(false);
+                              setNewClientName("");
+                              setNewClientPhone("");
                               setClientOpen(false);
                             }}
                           >
@@ -1383,6 +1326,29 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                   </Command>
                 </PopoverContent>
               </Popover>
+              
+              {isNewClient && (
+                <div className="space-y-3 mt-4 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-client-name-res">Nome do Cliente *</Label>
+                    <Input
+                      id="new-client-name-res"
+                      placeholder="Digite o nome do cliente"
+                      value={newClientName}
+                      onChange={(e) => setNewClientName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-client-phone-res">Telefone *</Label>
+                    <Input
+                      id="new-client-phone-res"
+                      placeholder="(00) 00000-0000"
+                      value={newClientPhone}
+                      onChange={(e) => setNewClientPhone(e.target.value)}
+                    />
+                  </div>
+              </div>
+            )}
             </div>
           </div>
 
@@ -1391,13 +1357,12 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
           {/* Seção 0.5: Cidade */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold mb-2">Cidade</h3>
+              <h3 className="text-lg font-semibold mb-2">Cidade / Estado</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Selecione a cidade para buscar dados climáticos (Fonte: NASA)
+                Selecione a cidade da instalacao dos equipamentos
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="city-res">Cidade / Estado *</Label>
               <Select value={selectedCityResidential} onValueChange={setSelectedCityResidential}>
                 <SelectTrigger id="city-res">
                   <SelectValue placeholder="Selecione a cidade" />
@@ -1414,7 +1379,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                 Dados climáticos incluem: Temperatura média mensal, Velocidade do vento, Radiação solar diária
               </p>
             </div>
-          </div>
+            </div>
 
           <Separator />
 
@@ -1424,8 +1389,8 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
               <h3 className="text-lg font-semibold mb-2">1. Banheiros</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Configure os equipamentos do ambiente banheiro
-              </p>
-            </div>
+                      </p>
+                    </div>
 
             {/* Chuveiro 01 */}
             <div className="space-y-4 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950">
@@ -1434,32 +1399,44 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                 <div className="space-y-2">
                   <Label htmlFor="shower1-flow">Vazão (L/min) *</Label>
                   <div className="flex gap-2">
-                    <Select value={shower1Flow} onValueChange={setShower1Flow}>
+                    <Select 
+                      value={shower1Flow} 
+                      onValueChange={(value) => {
+                        setShower1Flow(value);
+                        setShower1FlowCustom("");
+                      }}
+                    >
                       <SelectTrigger id="shower1-flow" className="flex-1">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="4">4 L/min</SelectItem>
                         <SelectItem value="6">6 L/min (Padrão)</SelectItem>
-                        <SelectItem value="custom">Digitar</SelectItem>
                       </SelectContent>
                     </Select>
-                    {shower1Flow === "custom" && (
                       <Input
                         type="number"
-                        step="0.1"
-                        placeholder="L/min"
-                        value={shower1FlowCustom}
-                        onChange={(e) => setShower1FlowCustom(e.target.value)}
-                        className="w-32"
+                      step="0.1"
+                      placeholder="Ou digite"
+                      value={shower1FlowCustom}
+                      onChange={(e) => {
+                        setShower1FlowCustom(e.target.value);
+                        if (e.target.value) setShower1Flow("");
+                      }}
+                      className="w-32"
                       />
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-2">
+                    </div>
+                    </div>
+            <div className="space-y-2">
                   <Label htmlFor="shower1-time">Tempo de Utilização (min) *</Label>
                   <div className="flex gap-2">
-                    <Select value={shower1Time} onValueChange={setShower1Time}>
+                    <Select 
+                      value={shower1Time} 
+                      onValueChange={(value) => {
+                        setShower1Time(value);
+                        setShower1TimeCustom("");
+                      }}
+                    >
                       <SelectTrigger id="shower1-time" className="flex-1">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
@@ -1468,23 +1445,23 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                         <SelectItem value="6">6 min</SelectItem>
                         <SelectItem value="8">8 min (Padrão)</SelectItem>
                         <SelectItem value="10">10 min</SelectItem>
-                        <SelectItem value="custom">Digitar</SelectItem>
                       </SelectContent>
                     </Select>
-                    {shower1Time === "custom" && (
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="min"
-                        value={shower1TimeCustom}
-                        onChange={(e) => setShower1TimeCustom(e.target.value)}
-                        className="w-32"
-                      />
-                    )}
+              <Input
+                type="number"
+                      step="0.1"
+                      placeholder="Ou digite"
+                      value={shower1TimeCustom}
+                      onChange={(e) => {
+                        setShower1TimeCustom(e.target.value);
+                        if (e.target.value) setShower1Time("");
+                      }}
+                      className="w-32"
+                    />
                   </div>
-                </div>
               </div>
             </div>
+          </div>
 
             {/* Chuveiro 02 */}
             <div className="space-y-4 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950">
@@ -1493,32 +1470,44 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                 <div className="space-y-2">
                   <Label htmlFor="shower2-flow">Vazão (L/min) *</Label>
                   <div className="flex gap-2">
-                    <Select value={shower2Flow} onValueChange={setShower2Flow}>
+                    <Select 
+                      value={shower2Flow} 
+                      onValueChange={(value) => {
+                        setShower2Flow(value);
+                        setShower2FlowCustom("");
+                      }}
+                    >
                       <SelectTrigger id="shower2-flow" className="flex-1">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="4">4 L/min</SelectItem>
                         <SelectItem value="6">6 L/min (Padrão)</SelectItem>
-                        <SelectItem value="custom">Digitar</SelectItem>
                       </SelectContent>
                     </Select>
-                    {shower2Flow === "custom" && (
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="L/min"
-                        value={shower2FlowCustom}
-                        onChange={(e) => setShower2FlowCustom(e.target.value)}
-                        className="w-32"
-                      />
-                    )}
-                  </div>
-                </div>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="Ou digite"
+                      value={shower2FlowCustom}
+                      onChange={(e) => {
+                        setShower2FlowCustom(e.target.value);
+                        if (e.target.value) setShower2Flow("");
+                      }}
+                      className="w-32"
+                    />
+            </div>
+            </div>
                 <div className="space-y-2">
                   <Label htmlFor="shower2-time">Tempo de Utilização (min) *</Label>
                   <div className="flex gap-2">
-                    <Select value={shower2Time} onValueChange={setShower2Time}>
+                    <Select 
+                      value={shower2Time} 
+                      onValueChange={(value) => {
+                        setShower2Time(value);
+                        setShower2TimeCustom("");
+                      }}
+                    >
                       <SelectTrigger id="shower2-time" className="flex-1">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
@@ -1527,23 +1516,23 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                         <SelectItem value="6">6 min</SelectItem>
                         <SelectItem value="8">8 min (Padrão)</SelectItem>
                         <SelectItem value="10">10 min</SelectItem>
-                        <SelectItem value="custom">Digitar</SelectItem>
                       </SelectContent>
                     </Select>
-                    {shower2Time === "custom" && (
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="min"
-                        value={shower2TimeCustom}
-                        onChange={(e) => setShower2TimeCustom(e.target.value)}
-                        className="w-32"
-                      />
-                    )}
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="Ou digite"
+                      value={shower2TimeCustom}
+                      onChange={(e) => {
+                        setShower2TimeCustom(e.target.value);
+                        if (e.target.value) setShower2Time("");
+                      }}
+                      className="w-32"
+                    />
                   </div>
-                </div>
-              </div>
             </div>
+          </div>
+        </div>
 
             {/* Torneiras Banheiro */}
             <div className="space-y-4 p-4 rounded-lg border-2 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
@@ -1552,32 +1541,44 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                 <div className="space-y-2">
                   <Label htmlFor="bathroom-flow">Vazão (L/min) *</Label>
                   <div className="flex gap-2">
-                    <Select value={bathroomFlow} onValueChange={setBathroomFlow}>
+                    <Select 
+                      value={bathroomFlow} 
+                      onValueChange={(value) => {
+                        setBathroomFlow(value);
+                        setBathroomFlowCustom("");
+                      }}
+                    >
                       <SelectTrigger id="bathroom-flow" className="flex-1">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="4">4 L/min</SelectItem>
                         <SelectItem value="6">6 L/min (Padrão)</SelectItem>
-                        <SelectItem value="custom">Digitar</SelectItem>
                       </SelectContent>
                     </Select>
-                    {bathroomFlow === "custom" && (
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="L/min"
-                        value={bathroomFlowCustom}
-                        onChange={(e) => setBathroomFlowCustom(e.target.value)}
-                        className="w-32"
-                      />
-                    )}
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="Ou digite"
+                      value={bathroomFlowCustom}
+                      onChange={(e) => {
+                        setBathroomFlowCustom(e.target.value);
+                        if (e.target.value) setBathroomFlow("");
+                      }}
+                      className="w-32"
+                    />
                   </div>
                 </div>
-                <div className="space-y-2">
+            <div className="space-y-2">
                   <Label htmlFor="bathroom-time">Tempo de Utilização (min) *</Label>
                   <div className="flex gap-2">
-                    <Select value={bathroomTime} onValueChange={setBathroomTime}>
+                    <Select 
+                      value={bathroomTime} 
+                      onValueChange={(value) => {
+                        setBathroomTime(value);
+                        setBathroomTimeCustom("");
+                      }}
+                    >
                       <SelectTrigger id="bathroom-time" className="flex-1">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
@@ -1586,23 +1587,23 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                         <SelectItem value="6">6 min</SelectItem>
                         <SelectItem value="8">8 min (Padrão)</SelectItem>
                         <SelectItem value="10">10 min</SelectItem>
-                        <SelectItem value="custom">Digitar</SelectItem>
                       </SelectContent>
                     </Select>
-                    {bathroomTime === "custom" && (
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="min"
-                        value={bathroomTimeCustom}
-                        onChange={(e) => setBathroomTimeCustom(e.target.value)}
-                        className="w-32"
-                      />
-                    )}
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="Ou digite"
+                      value={bathroomTimeCustom}
+                      onChange={(e) => {
+                        setBathroomTimeCustom(e.target.value);
+                        if (e.target.value) setBathroomTime("");
+                      }}
+                      className="w-32"
+                    />
                   </div>
                 </div>
-              </div>
             </div>
+          </div>
 
             {/* Banheira */}
             <div className="space-y-4 p-4 rounded-lg border-2 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
@@ -1611,7 +1612,13 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                 <div className="space-y-2">
                   <Label htmlFor="bathtub-flow">Vazão (L/min) *</Label>
                   <div className="flex gap-2">
-                    <Select value={bathtubFlow} onValueChange={setBathtubFlow}>
+                    <Select 
+                      value={bathtubFlow} 
+                      onValueChange={(value) => {
+                        setBathtubFlow(value);
+                        setBathtubFlowCustom("");
+                      }}
+                    >
                       <SelectTrigger id="bathtub-flow" className="flex-1">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
@@ -1619,25 +1626,31 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                         <SelectItem value="250">250 L/min</SelectItem>
                         <SelectItem value="300">300 L/min</SelectItem>
                         <SelectItem value="350">350 L/min (Padrão)</SelectItem>
-                        <SelectItem value="custom">Digitar</SelectItem>
                       </SelectContent>
                     </Select>
-                    {bathtubFlow === "custom" && (
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="L/min"
-                        value={bathtubFlowCustom}
-                        onChange={(e) => setBathtubFlowCustom(e.target.value)}
-                        className="w-32"
-                      />
-                    )}
-                  </div>
-                </div>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="Ou digite"
+                      value={bathtubFlowCustom}
+                      onChange={(e) => {
+                        setBathtubFlowCustom(e.target.value);
+                        if (e.target.value) setBathtubFlow("");
+                      }}
+                      className="w-32"
+                    />
+            </div>
+            </div>
                 <div className="space-y-2">
                   <Label htmlFor="bathtub-freq">Frequência de Uso (min) *</Label>
                   <div className="flex gap-2">
-                    <Select value={bathtubFrequency} onValueChange={setBathtubFrequency}>
+                    <Select 
+                      value={bathtubFrequency} 
+                      onValueChange={(value) => {
+                        setBathtubFrequency(value);
+                        setBathtubFrequencyCustom("");
+                      }}
+                    >
                       <SelectTrigger id="bathtub-freq" className="flex-1">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
@@ -1645,23 +1658,23 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                         <SelectItem value="1">1 min</SelectItem>
                         <SelectItem value="2">2 min (Padrão)</SelectItem>
                         <SelectItem value="3">3 min</SelectItem>
-                        <SelectItem value="custom">Digitar</SelectItem>
                       </SelectContent>
                     </Select>
-                    {bathtubFrequency === "custom" && (
-                      <Input
-                        type="number"
-                        step="0.1"
-                        placeholder="min"
-                        value={bathtubFrequencyCustom}
-                        onChange={(e) => setBathtubFrequencyCustom(e.target.value)}
-                        className="w-32"
-                      />
-                    )}
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="Ou digite"
+                      value={bathtubFrequencyCustom}
+                      onChange={(e) => {
+                        setBathtubFrequencyCustom(e.target.value);
+                        if (e.target.value) setBathtubFrequency("");
+                      }}
+                      className="w-32"
+                    />
                   </div>
                 </div>
-              </div>
             </div>
+          </div>
           </div>
 
           <Separator />
@@ -1672,54 +1685,72 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
               <h3 className="text-lg font-semibold mb-2">2. Cozinha</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Configure a vazão e tempo de utilização das torneiras da cozinha
-              </p>
-            </div>
+                      </p>
+                    </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="kitchen-flow">Vazão das Torneiras (L/min) *</Label>
-                <Select value={kitchenFlow} onValueChange={setKitchenFlow}>
-                  <SelectTrigger id="kitchen-flow">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="4">4 L/min</SelectItem>
-                    <SelectItem value="6">6 L/min</SelectItem>
-                    <SelectItem value="9">9 L/min (Padrão)</SelectItem>
-                    <SelectItem value="custom">Digitar vazão</SelectItem>
-                  </SelectContent>
-                </Select>
-                {kitchenFlow === "custom" && (
-                  <Input
-                    type="number"
+                <div className="flex gap-2">
+                  <Select 
+                    value={kitchenFlow} 
+                    onValueChange={(value) => {
+                      setKitchenFlow(value);
+                      setKitchenFlowCustom("");
+                    }}
+                  >
+                    <SelectTrigger id="kitchen-flow" className="flex-1">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="4">4 L/min</SelectItem>
+                      <SelectItem value="6">6 L/min</SelectItem>
+                      <SelectItem value="9">9 L/min (Padrão)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                      <Input
+                        type="number"
                     step="0.1"
-                    placeholder="Digite a vazão"
+                    placeholder="Ou digite"
                     value={kitchenFlowCustom}
-                    onChange={(e) => setKitchenFlowCustom(e.target.value)}
-                  />
-                )}
-              </div>
-              <div className="space-y-2">
+                    onChange={(e) => {
+                      setKitchenFlowCustom(e.target.value);
+                      if (e.target.value) setKitchenFlow("");
+                    }}
+                    className="w-32"
+                      />
+                    </div>
+                    </div>
+            <div className="space-y-2">
                 <Label htmlFor="kitchen-time">Tempo de Utilização (min) *</Label>
-                <Select value={kitchenTime} onValueChange={setKitchenTime}>
-                  <SelectTrigger id="kitchen-time">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10 min</SelectItem>
-                    <SelectItem value="15">15 min</SelectItem>
-                    <SelectItem value="20">20 min (Padrão)</SelectItem>
-                    <SelectItem value="custom">Digitar tempo</SelectItem>
-                  </SelectContent>
-                </Select>
-                {kitchenTime === "custom" && (
+                <div className="flex gap-2">
+                  <Select 
+                    value={kitchenTime} 
+                    onValueChange={(value) => {
+                      setKitchenTime(value);
+                      setKitchenTimeCustom("");
+                    }}
+                  >
+                    <SelectTrigger id="kitchen-time" className="flex-1">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 min</SelectItem>
+                      <SelectItem value="15">15 min</SelectItem>
+                      <SelectItem value="20">20 min (Padrão)</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Input
                     type="number"
                     step="0.1"
-                    placeholder="Digite o tempo"
+                    placeholder="Ou digite"
                     value={kitchenTimeCustom}
-                    onChange={(e) => setKitchenTimeCustom(e.target.value)}
+                    onChange={(e) => {
+                      setKitchenTimeCustom(e.target.value);
+                      if (e.target.value) setKitchenTime("");
+                    }}
+                    className="w-32"
                   />
-                )}
+                  </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="kitchen-qty">Quantidade *</Label>
@@ -1747,48 +1778,66 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="laundry-flow">Vazão das Torneiras (L/min) *</Label>
-                <Select value={laundryFlow} onValueChange={setLaundryFlow}>
-                  <SelectTrigger id="laundry-flow">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="4">4 L/min</SelectItem>
-                    <SelectItem value="6">6 L/min</SelectItem>
-                    <SelectItem value="9">9 L/min (Padrão)</SelectItem>
-                    <SelectItem value="custom">Digitar vazão</SelectItem>
-                  </SelectContent>
-                </Select>
-                {laundryFlow === "custom" && (
+                <div className="flex gap-2">
+                  <Select 
+                    value={laundryFlow} 
+                    onValueChange={(value) => {
+                      setLaundryFlow(value);
+                      setLaundryFlowCustom("");
+                    }}
+                  >
+                    <SelectTrigger id="laundry-flow" className="flex-1">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="4">4 L/min</SelectItem>
+                      <SelectItem value="6">6 L/min</SelectItem>
+                      <SelectItem value="9">9 L/min (Padrão)</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Input
                     type="number"
                     step="0.1"
-                    placeholder="Digite a vazão"
+                    placeholder="Ou digite"
                     value={laundryFlowCustom}
-                    onChange={(e) => setLaundryFlowCustom(e.target.value)}
+                    onChange={(e) => {
+                      setLaundryFlowCustom(e.target.value);
+                      if (e.target.value) setLaundryFlow("");
+                    }}
+                    className="w-32"
                   />
-                )}
-              </div>
-              <div className="space-y-2">
+                </div>
+            </div>
+            <div className="space-y-2">
                 <Label htmlFor="laundry-time">Tempo de Utilização (min) *</Label>
-                <Select value={laundryTime} onValueChange={setLaundryTime}>
-                  <SelectTrigger id="laundry-time">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5 min (Padrão)</SelectItem>
-                    <SelectItem value="10">10 min</SelectItem>
-                    <SelectItem value="custom">Digitar tempo</SelectItem>
-                  </SelectContent>
-                </Select>
-                {laundryTime === "custom" && (
-                  <Input
-                    type="number"
+                <div className="flex gap-2">
+                  <Select 
+                    value={laundryTime} 
+                    onValueChange={(value) => {
+                      setLaundryTime(value);
+                      setLaundryTimeCustom("");
+                    }}
+                  >
+                    <SelectTrigger id="laundry-time" className="flex-1">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 min (Padrão)</SelectItem>
+                      <SelectItem value="10">10 min</SelectItem>
+                    </SelectContent>
+                  </Select>
+              <Input
+                type="number"
                     step="0.1"
-                    placeholder="Digite o tempo"
+                    placeholder="Ou digite"
                     value={laundryTimeCustom}
-                    onChange={(e) => setLaundryTimeCustom(e.target.value)}
+                    onChange={(e) => {
+                      setLaundryTimeCustom(e.target.value);
+                      if (e.target.value) setLaundryTime("");
+                    }}
+                    className="w-32"
                   />
-                )}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="laundry-qty">Quantidade *</Label>
@@ -1799,7 +1848,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                   value={laundryQuantity}
                   onChange={(e) => setLaundryQuantity(parseInt(e.target.value) || 1)}
                 />
-              </div>
+            </div>
             </div>
           </div>
 
@@ -1808,7 +1857,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
           {/* Seção 5: Serviços Adicionais */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold mb-2">5. Serviços Adicionais</h3>
+              <h3 className="text-lg font-semibold mb-2">5. Selecione os Adicionais</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Selecione os adicionais necessários
               </p>
@@ -1824,7 +1873,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                 <Label htmlFor="project-res" className="cursor-pointer font-semibold">
                   📐 Projetos
                 </Label>
-              </div>
+            </div>
 
               {/* Serviços de Instalação */}
               <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
@@ -1836,7 +1885,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                 <Label htmlFor="installation-res" className="cursor-pointer font-semibold">
                   🔧 Serviços de Instalação
                 </Label>
-              </div>
+            </div>
 
               {/* Sistema de Circulação de Rede */}
               <div className="p-4 rounded-lg border-2 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
@@ -1849,7 +1898,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                   <Label htmlFor="network-circulation" className="cursor-pointer font-semibold">
                     🔄 Sistema de Circulação de Rede
                   </Label>
-                </div>
+          </div>
                 {hasNetworkCirculation && (
                   <div className="ml-6 space-y-2">
                     <Label htmlFor="network-circulation-qty">Quantidade *</Label>
@@ -1864,7 +1913,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                     />
                   </div>
                 )}
-              </div>
+        </div>
 
               {/* Sistema de Pressurização */}
               <div className="p-4 rounded-lg border-2 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950">
@@ -1916,14 +1965,16 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
         <DialogHeader>
           <DialogTitle>
             {!segment ? "Nova Proposta - Selecione a Segmentação" : 
-             segment === "piscina" ? "Nova Proposta - Piscina" :
-             "Nova Proposta - Residencial"}
+             segment === "piscina" ? "Proposta Piscina" :
+             "Proposta residencial"}
           </DialogTitle>
-          <DialogDescription>
-            {!segment ? "Escolha o tipo de proposta que deseja criar" :
-             segment === "piscina" ? "Preencha todas as informações para calcular o dimensionamento" :
-             "Preencha os dados da proposta"}
-          </DialogDescription>
+          {segment !== "residencial" && (
+            <DialogDescription>
+              {!segment ? "Escolha o tipo de proposta que deseja criar" :
+               segment === "piscina" ? "" :
+               ""}
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         {renderContent()}
@@ -1938,7 +1989,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
 
           {segment === "piscina" && (
             <Button onClick={handleSubmit}>
-              Finalizar Proposta
+              Criar Proposta
           </Button>
           )}
 
