@@ -1309,77 +1309,6 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
 
           <Separator />
 
-          {/* Seleção de Temperatura de Consumo */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Seleção Temperatura de Consumo</h3>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="consumption-temp-res">Temperatura de Consumo (°C) *</Label>
-              <div className="flex gap-2">
-                <Select 
-                  value={consumptionTemp} 
-                  onValueChange={(value) => {
-                    setConsumptionTemp(value);
-                    setConsumptionTempCustom("");
-                  }}
-                >
-                  <SelectTrigger id="consumption-temp-res" className="flex-1">
-                    <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="40">40°C (Pre-setada)</SelectItem>
-                </SelectContent>
-              </Select>
-                <Input
-                  type="number"
-                  step="0.1"
-                  placeholder="Ou digite"
-                  value={consumptionTempCustom}
-                  onChange={(e) => {
-                    setConsumptionTempCustom(e.target.value);
-                    if (e.target.value) setConsumptionTemp("");
-                  }}
-                  className="w-32"
-                />
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Serviços */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Serviços</h3>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
-                <Checkbox
-                  id="project-res"
-                  checked={needsProject}
-                  onCheckedChange={(checked) => setNeedsProject(checked as boolean)}
-                />
-                <Label htmlFor="project-res" className="cursor-pointer font-semibold">
-                  📐 Projetos
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
-                <Checkbox
-                  id="installation-res"
-                  checked={needsInstallation}
-                  onCheckedChange={(checked) => setNeedsInstallation(checked as boolean)}
-                />
-                <Label htmlFor="installation-res" className="cursor-pointer font-semibold">
-                  🔧 Serviço de Instalação
-                </Label>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
           {/* Seção 0.5: Cidade */}
           <div className="space-y-4">
             <div>
@@ -1491,67 +1420,31 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="bathroom-flow">Vazão (L/min) *</Label>
-                  <div className="flex gap-2">
-                    <Select 
-                      value={bathroomFlow} 
-                      onValueChange={(value) => {
-                        setBathroomFlow(value);
-                        setBathroomFlowCustom("");
-                      }}
-                    >
-                      <SelectTrigger id="bathroom-flow" className="flex-1">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="4">4 L/min</SelectItem>
-                        <SelectItem value="6">6 L/min (Padrão)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      placeholder="Ou digite"
-                      value={bathroomFlowCustom}
-                      onChange={(e) => {
-                        setBathroomFlowCustom(e.target.value);
-                        if (e.target.value) setBathroomFlow("");
-                      }}
-                      className="w-32"
-                    />
-                  </div>
+                  <Input
+                    id="bathroom-flow"
+                    type="number"
+                    step="0.1"
+                    placeholder="Digite a vazão"
+                    value={bathroomFlowCustom || bathroomFlow}
+                    onChange={(e) => {
+                      setBathroomFlowCustom(e.target.value);
+                      setBathroomFlow("");
+                    }}
+                  />
                 </div>
-            <div className="space-y-2">
+                <div className="space-y-2">
                   <Label htmlFor="bathroom-time">Tempo de Utilização (min) *</Label>
-                  <div className="flex gap-2">
-                    <Select 
-                      value={bathroomTime} 
-                      onValueChange={(value) => {
-                        setBathroomTime(value);
-                        setBathroomTimeCustom("");
-                      }}
-                    >
-                      <SelectTrigger id="bathroom-time" className="flex-1">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="4">4 min</SelectItem>
-                        <SelectItem value="6">6 min</SelectItem>
-                        <SelectItem value="8">8 min (Padrão)</SelectItem>
-                        <SelectItem value="10">10 min</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      placeholder="Ou digite"
-                      value={bathroomTimeCustom}
-                      onChange={(e) => {
-                        setBathroomTimeCustom(e.target.value);
-                        if (e.target.value) setBathroomTime("");
-                      }}
-                      className="w-32"
-                    />
-                  </div>
+                  <Input
+                    id="bathroom-time"
+                    type="number"
+                    step="0.1"
+                    placeholder="Digite o tempo"
+                    value={bathroomTimeCustom || bathroomTime}
+                    onChange={(e) => {
+                      setBathroomTimeCustom(e.target.value);
+                      setBathroomTime("");
+                    }}
+                  />
                 </div>
             </div>
           </div>
@@ -1566,7 +1459,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                     id="bathtub-flow"
                     type="number"
                     step="0.1"
-                    placeholder="Digite a capacidade"
+                    placeholder="Capacidade (Litros)"
                     value={bathtubFlowCustom || bathtubFlow}
                     onChange={(e) => {
                       setBathtubFlowCustom(e.target.value);
@@ -1678,12 +1571,59 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
 
           <Separator />
 
+          {/* Seleção de Temperatura de Consumo */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Seleção Temperatura de Consumo</h3>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="consumption-temp-res">Temperatura de Consumo (°C) *</Label>
+              <Input
+                id="consumption-temp-res"
+                type="number"
+                step="0.1"
+                placeholder="Digite a temperatura de consumo"
+                value={consumptionTempCustom || consumptionTemp}
+                onChange={(e) => {
+                  setConsumptionTempCustom(e.target.value);
+                  setConsumptionTemp("");
+                }}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
           {/* Seção 5: Serviços Adicionais */}
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold mb-2">Selecione os adicionais</h3>
             </div>
             <div className="space-y-3">
+              {/* Projetos */}
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
+                <Checkbox
+                  id="project-res"
+                  checked={needsProject}
+                  onCheckedChange={(checked) => setNeedsProject(checked as boolean)}
+                />
+                <Label htmlFor="project-res" className="cursor-pointer font-semibold">
+                  📐 Projetos
+                </Label>
+              </div>
+
+              {/* Serviço de Instalação */}
+              <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+                <Checkbox
+                  id="installation-res"
+                  checked={needsInstallation}
+                  onCheckedChange={(checked) => setNeedsInstallation(checked as boolean)}
+                />
+                <Label htmlFor="installation-res" className="cursor-pointer font-semibold">
+                  🔧 Serviço de Instalação
+                </Label>
+              </div>
+
               {/* Sistema de Circulação de Rede */}
               <div className="p-4 rounded-lg border-2 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950">
                 <div className="flex items-center space-x-2 mb-3">
@@ -1724,6 +1664,9 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                     💧 Sistema de Pressurização
                   </Label>
                 </div>
+                <div className="mb-3">
+                  <h4 className="text-sm font-medium">Simultaneidade dos pontos</h4>
+                </div>
                 {hasPressurizationSystem && (
                   <div className="ml-6 space-y-4 p-4 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
                     <div className="space-y-4">
@@ -1735,7 +1678,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                           id="shower1-quantity"
                           type="number"
                           min="1"
-                          placeholder="Digite a quantidade"
+                          placeholder="Digite a quantidade de chuveiros simultaneos"
                           value={shower1Quantity}
                           onChange={(e) => setShower1Quantity(e.target.value)}
                           className="w-full"
@@ -1749,7 +1692,7 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                           id="shower2-quantity"
                           type="number"
                           min="1"
-                          placeholder="Digite a quantidade"
+                          placeholder="Digite a quantidade de chuveiros simultaneos"
                           value={shower2Quantity}
                           onChange={(e) => setShower2Quantity(e.target.value)}
                           className="w-full"
