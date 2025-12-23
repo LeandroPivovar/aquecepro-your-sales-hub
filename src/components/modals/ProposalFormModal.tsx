@@ -1664,12 +1664,12 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
                     💧 Sistema de Pressurização
                   </Label>
                 </div>
-                <div className="mb-3">
-                  <h4 className="text-sm font-medium">Simultaneidade dos pontos</h4>
-                </div>
                 {hasPressurizationSystem && (
                   <div className="ml-6 space-y-4 p-4 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
                     <div className="space-y-4">
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Simultaneidade dos pontos</h4>
+                      </div>
                       <div className="space-y-2">
                         <Label htmlFor="shower1-quantity" className="text-sm font-medium">
                           Quantidade Chuveiro 1
@@ -1768,3 +1768,4 @@ export function ProposalFormModal({ open, onOpenChange }: ProposalFormModalProps
     </Dialog>
   );
 }
+                                          
