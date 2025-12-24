@@ -33,7 +33,7 @@ const categoriesBySegment: Record<string, string[]> = {
 };
 
 const categories2ByCategory1: Record<string, string[]> = {
-  "Equipamentos": [
+  Equipamentos: [
     "Aquecedor a gás",
     "Bombas de circulacao",
     "Bomba de Calor",
@@ -42,13 +42,36 @@ const categories2ByCategory1: Record<string, string[]> = {
     "Kit pressurizacao indireto",
     "Motobombas",
     "Pressurizador",
-    "Reservatório"
+    "Reservatório",
   ],
-  "Serviços": ["Execução"],
+  Serviços: ["Execução"],
 };
 
 // Categorias 2 padrão para Comercial (mantém as originais)
 const defaultCategories2 = ["Baixa Pressão", "Alta Pressão", "Compacto", "Acumulação"];
+
+// Campos de características por Categoria 2 (chave normalizada)
+const categories2Fields: Record<string, string[]> = {
+  "bomba de calor": [
+    "thermalCapacity26",
+    "thermalCapacity15",
+    "electricConsumption26",
+    "electricConsumption15",
+    "idealFlowRate",
+  ],
+  "aquecedor a gas": ["nominalPower", "heaterEfficiency", "gasType"],
+  "coletor solar": ["collectorArea", "collectorProduction"],
+  reservatorio: ["volume", "resistancePower"],
+  reservatório: ["volume", "resistancePower"],
+  pressurizador: ["flowAt15mca"],
+  "kit pressurizacao indireto": ["simultaneousFlow20C"],
+  "bombas de circulacao": [],
+  "motobombas": [],
+  "controlador digital": [],
+  execucao: [],
+  execução: [],
+  projeto: [],
+};
 
 export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) {
   // Informações Básicas
@@ -65,6 +88,17 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
   const [electricConsumption26, setElectricConsumption26] = useState("");
   const [electricConsumption15, setElectricConsumption15] = useState("");
   const [idealFlowRate, setIdealFlowRate] = useState("");
+
+  // Campos adicionais de características
+  const [volume, setVolume] = useState("");
+  const [resistancePower, setResistancePower] = useState("");
+  const [collectorArea, setCollectorArea] = useState("");
+  const [collectorProduction, setCollectorProduction] = useState("");
+  const [nominalPower, setNominalPower] = useState("");
+  const [heaterEfficiency, setHeaterEfficiency] = useState("");
+  const [gasType, setGasType] = useState("");
+  const [flowAt15mca, setFlowAt15mca] = useState("");
+  const [simultaneousFlow20C, setSimultaneousFlow20C] = useState("");
 
   // Valores Financeiros
   const [cost, setCost] = useState("");
@@ -99,6 +133,19 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
     setCategory2(""); // Limpar categoria2 quando categoria1 mudar
   };
 
+  const normalize = (str: string) =>
+    str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+
+  const getActiveFields = () => {
+    if (!category2) return [];
+    const key = normalize(category2);
+    return categories2Fields[key] || [];
+  };
+
   const handleSubmit = () => {
     console.log({
       segment,
@@ -112,6 +159,15 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
       electricConsumption26: parseFloat(electricConsumption26),
       electricConsumption15: parseFloat(electricConsumption15),
       idealFlowRate: parseFloat(idealFlowRate),
+      volume: parseFloat(volume),
+      resistancePower: parseFloat(resistancePower),
+      collectorArea: parseFloat(collectorArea),
+      collectorProduction: parseFloat(collectorProduction),
+      nominalPower: parseFloat(nominalPower),
+      heaterEfficiency: parseFloat(heaterEfficiency),
+      gasType,
+      flowAt15mca: parseFloat(flowAt15mca),
+      simultaneousFlow20C: parseFloat(simultaneousFlow20C),
       cost: parseFloat(cost),
       saleValue: parseFloat(saleValue),
     });
@@ -222,77 +278,219 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Características Técnicas</h3>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="thermal-capacity-26">
-                  Capacidade Térmica - Condição 26°C (kW) *
-                </Label>
-                <Input
-                  id="thermal-capacity-26"
-                  type="number"
-                  step="0.01"
-                  placeholder="Ex: 5.2"
-                  value={thermalCapacity26}
-                  onChange={(e) => setThermalCapacity26(e.target.value)}
-                />
-              </div>
+            {getActiveFields().length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Selecione a Categoria 2 para ver os campos necessários.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                {getActiveFields().includes("thermalCapacity26") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="thermal-capacity-26">
+                      Capacidade Térmica - Condição 26°C (kW) *
+                    </Label>
+                    <Input
+                      id="thermal-capacity-26"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 5.2"
+                      value={thermalCapacity26}
+                      onChange={(e) => setThermalCapacity26(e.target.value)}
+                    />
+                  </div>
+                )}
 
-              <div className="space-y-2">
-                <Label htmlFor="thermal-capacity-15">
-                  Capacidade Térmica - Condição 15°C (kW) *
-                </Label>
-                <Input
-                  id="thermal-capacity-15"
-                  type="number"
-                  step="0.01"
-                  placeholder="Ex: 4.8"
-                  value={thermalCapacity15}
-                  onChange={(e) => setThermalCapacity15(e.target.value)}
-                />
-              </div>
+                {getActiveFields().includes("thermalCapacity15") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="thermal-capacity-15">
+                      Capacidade Térmica - Condição 15°C (kW) *
+                    </Label>
+                    <Input
+                      id="thermal-capacity-15"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 4.8"
+                      value={thermalCapacity15}
+                      onChange={(e) => setThermalCapacity15(e.target.value)}
+                    />
+                  </div>
+                )}
 
-              <div className="space-y-2">
-                <Label htmlFor="electric-consumption-26">
-                  Consumo Elétrico - Condição 26°C (kWh/h) *
-                </Label>
-                <Input
-                  id="electric-consumption-26"
-                  type="number"
-                  step="0.001"
-                  placeholder="Ex: 1.2"
-                  value={electricConsumption26}
-                  onChange={(e) => setElectricConsumption26(e.target.value)}
-                />
-              </div>
+                {getActiveFields().includes("electricConsumption26") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="electric-consumption-26">
+                      Consumo Elétrico - Condição 26°C (kWh/h) *
+                    </Label>
+                    <Input
+                      id="electric-consumption-26"
+                      type="number"
+                      step="0.001"
+                      placeholder="Ex: 1.2"
+                      value={electricConsumption26}
+                      onChange={(e) => setElectricConsumption26(e.target.value)}
+                    />
+                  </div>
+                )}
 
-              <div className="space-y-2">
-                <Label htmlFor="electric-consumption-15">
-                  Consumo Elétrico - Condição 15°C (kWh/h) *
-                </Label>
-                <Input
-                  id="electric-consumption-15"
-                  type="number"
-                  step="0.001"
-                  placeholder="Ex: 1.5"
-                  value={electricConsumption15}
-                  onChange={(e) => setElectricConsumption15(e.target.value)}
-                />
-              </div>
+                {getActiveFields().includes("electricConsumption15") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="electric-consumption-15">
+                      Consumo Elétrico - Condição 15°C (kWh/h) *
+                    </Label>
+                    <Input
+                      id="electric-consumption-15"
+                      type="number"
+                      step="0.001"
+                      placeholder="Ex: 1.5"
+                      value={electricConsumption15}
+                      onChange={(e) => setElectricConsumption15(e.target.value)}
+                    />
+                  </div>
+                )}
 
-              <div className="space-y-2">
-                <Label htmlFor="ideal-flow-rate">
-                  Vazão Ideal (m³/h) *
-                </Label>
-                <Input
-                  id="ideal-flow-rate"
-                  type="number"
-                  step="0.01"
-                  placeholder="Ex: 0.8"
-                  value={idealFlowRate}
-                  onChange={(e) => setIdealFlowRate(e.target.value)}
-                />
+                {getActiveFields().includes("idealFlowRate") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="ideal-flow-rate">
+                      Vazão Ideal (m³/h) *
+                    </Label>
+                    <Input
+                      id="ideal-flow-rate"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 0.8"
+                      value={idealFlowRate}
+                      onChange={(e) => setIdealFlowRate(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {getActiveFields().includes("volume") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="volume">Volume (litros)</Label>
+                    <Input
+                      id="volume"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 200"
+                      value={volume}
+                      onChange={(e) => setVolume(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {getActiveFields().includes("resistancePower") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="resistance-power">Potência resistência (kW)</Label>
+                    <Input
+                      id="resistance-power"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 3.0"
+                      value={resistancePower}
+                      onChange={(e) => setResistancePower(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {getActiveFields().includes("collectorArea") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="collector-area">Área do coletor (m²)</Label>
+                    <Input
+                      id="collector-area"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 2.5"
+                      value={collectorArea}
+                      onChange={(e) => setCollectorArea(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {getActiveFields().includes("collectorProduction") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="collector-production">Produção média do coletor PMDEE (kWh/m².dia)</Label>
+                    <Input
+                      id="collector-production"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 4.2"
+                      value={collectorProduction}
+                      onChange={(e) => setCollectorProduction(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {getActiveFields().includes("nominalPower") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="nominal-power">Potência nominal (kcal/h)</Label>
+                    <Input
+                      id="nominal-power"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 30000"
+                      value={nominalPower}
+                      onChange={(e) => setNominalPower(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {getActiveFields().includes("heaterEfficiency") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="heater-efficiency">Eficiência aquecedor (%)</Label>
+                    <Input
+                      id="heater-efficiency"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 92"
+                      value={heaterEfficiency}
+                      onChange={(e) => setHeaterEfficiency(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {getActiveFields().includes("gasType") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="gas-type">Tipo do gás</Label>
+                    <Input
+                      id="gas-type"
+                      placeholder="Ex: GLP / GN"
+                      value={gasType}
+                      onChange={(e) => setGasType(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {getActiveFields().includes("flowAt15mca") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="flow-15mca">Vazão c/ pressão de 15mca (litros/min)</Label>
+                    <Input
+                      id="flow-15mca"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 12"
+                      value={flowAt15mca}
+                      onChange={(e) => setFlowAt15mca(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {getActiveFields().includes("simultaneousFlow20C") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="flow-20c">
+                      Vazão simultânea com capacidade de elevação temperatura 20°C
+                    </Label>
+                    <Input
+                      id="flow-20c"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 10"
+                      value={simultaneousFlow20C}
+                      onChange={(e) => setSimultaneousFlow20C(e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
-            </div>
+            )}
           </div>
 
           <Separator />
