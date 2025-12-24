@@ -26,8 +26,29 @@ interface ProductFormModalProps {
 }
 
 const mockSegments = ["Residencial", "Comercial"];
-const mockCategories1 = ["Aquecedores Solares", "Aquecedores a Gás", "Bombas de Calor", "Acessórios"];
-const mockCategories2 = ["Baixa Pressão", "Alta Pressão", "Compacto", "Acumulação"];
+
+const categoriesBySegment: Record<string, string[]> = {
+  Residencial: ["Equipamentos", "Serviços"],
+  Comercial: ["Aquecedores Solares", "Aquecedores a Gás", "Bombas de Calor", "Acessórios"],
+};
+
+const categories2ByCategory1: Record<string, string[]> = {
+  "Equipamentos": [
+    "Aquecedor a gás",
+    "Bombas de circulacao",
+    "Bomba de Calor",
+    "Coletor solar",
+    "Controlador digital",
+    "Kit pressurizacao indireto",
+    "Motobombas",
+    "Pressurizador",
+    "Reservatório"
+  ],
+  "Serviços": ["Execução"],
+};
+
+// Categorias 2 padrão para Comercial (mantém as originais)
+const defaultCategories2 = ["Baixa Pressão", "Alta Pressão", "Compacto", "Acumulação"];
 
 export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) {
   // Informações Básicas
@@ -48,6 +69,35 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
   // Valores Financeiros
   const [cost, setCost] = useState("");
   const [saleValue, setSaleValue] = useState("");
+
+  // Obter categorias 1 baseadas no segmento selecionado
+  const getCategories1 = () => {
+    if (!segment) return [];
+    return categoriesBySegment[segment] || [];
+  };
+
+  // Obter categorias 2 baseadas na categoria 1 selecionada
+  const getCategories2 = () => {
+    if (!category1) return [];
+    if (categories2ByCategory1[category1]) {
+      return categories2ByCategory1[category1].sort(); // Ordenar alfabeticamente
+    }
+    // Para categorias do segmento Comercial, usar as categorias padrão
+    return defaultCategories2;
+  };
+
+  // Limpar categoria1 quando o segmento mudar
+  const handleSegmentChange = (newSegment: string) => {
+    setSegment(newSegment);
+    setCategory1(""); // Limpar categoria1 quando segmento mudar
+    setCategory2(""); // Limpar categoria2 também
+  };
+
+  // Limpar categoria2 quando categoria1 mudar
+  const handleCategory1Change = (newCategory1: string) => {
+    setCategory1(newCategory1);
+    setCategory2(""); // Limpar categoria2 quando categoria1 mudar
+  };
 
   const handleSubmit = () => {
     console.log({
@@ -86,7 +136,7 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="segment">Segmento *</Label>
-                <Select value={segment} onValueChange={setSegment}>
+                <Select value={segment} onValueChange={handleSegmentChange}>
                   <SelectTrigger id="segment">
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
@@ -102,12 +152,12 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
 
               <div className="space-y-2">
                 <Label htmlFor="category1">Categoria 1 *</Label>
-                <Select value={category1} onValueChange={setCategory1}>
+                <Select value={category1} onValueChange={handleCategory1Change} disabled={!segment}>
                   <SelectTrigger id="category1">
-                    <SelectValue placeholder="Selecione" />
+                    <SelectValue placeholder={segment ? "Selecione" : "Selecione o segmento primeiro"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockCategories1.map((cat) => (
+                    {getCategories1().map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         {cat}
                       </SelectItem>
@@ -118,12 +168,12 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
 
               <div className="space-y-2">
                 <Label htmlFor="category2">Categoria 2 *</Label>
-                <Select value={category2} onValueChange={setCategory2}>
+                <Select value={category2} onValueChange={setCategory2} disabled={!category1}>
                   <SelectTrigger id="category2">
-                    <SelectValue placeholder="Selecione" />
+                    <SelectValue placeholder={category1 ? "Selecione" : "Selecione a categoria 1 primeiro"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockCategories2.map((cat) => (
+                    {getCategories2().map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         {cat}
                       </SelectItem>
