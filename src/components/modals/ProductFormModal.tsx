@@ -25,7 +25,7 @@ interface ProductFormModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const mockSegments = ["Residencial", "Comercial", "Industrial"];
+const mockSegments = ["Residencial", "Comercial"];
 const mockCategories1 = ["Aquecedores Solares", "Aquecedores a Gás", "Bombas de Calor", "Acessórios"];
 const mockCategories2 = ["Baixa Pressão", "Alta Pressão", "Compacto", "Acumulação"];
 
