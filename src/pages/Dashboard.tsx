@@ -1,55 +1,82 @@
+import { useQuery } from "@tanstack/react-query";
 import { StatCard } from "@/components/common/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, CheckCircle, XCircle, TrendingUp, Calendar, Trophy } from "lucide-react";
+import { FileText, CheckCircle, XCircle, TrendingUp, Calendar, Trophy, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
-const stats = [
-  {
-    title: "Taxa de Conversão",
-    value: "32%",
-    description: "Últimos 30 dias",
-    icon: TrendingUp,
-    trend: { value: 5.2, isPositive: true },
-  },
-  {
-    title: "Propostas Emitidas",
-    value: "156",
-    description: "Este mês",
-    icon: FileText,
-    trend: { value: 12.3, isPositive: true },
-  },
-  {
-    title: "Propostas Fechadas",
-    value: "50",
-    description: "Este mês",
-    icon: CheckCircle,
-    trend: { value: 8.1, isPositive: true },
-  },
-  {
-    title: "Propostas Canceladas",
-    value: "18",
-    description: "Este mês",
-    icon: XCircle,
-    trend: { value: 3.2, isPositive: false },
-  },
-];
-
-const upcomingAppointments = [
-  { id: 1, client: "Maria Silva", store: "Loja Centro", date: "2024-01-15", time: "10:00", seller: "João Santos" },
-  { id: 2, client: "Carlos Souza", store: "Loja Norte", date: "2024-01-15", time: "14:00", seller: "Ana Costa" },
-  { id: 3, client: "Pedro Lima", store: "Loja Sul", date: "2024-01-16", time: "09:00", seller: "João Santos" },
-  { id: 4, client: "Juliana Rocha", store: "Loja Centro", date: "2024-01-16", time: "15:00", seller: "Paula Dias" },
-];
-
-const topSellers = [
-  { name: "João Santos", appointments: 52, proposals: 45, closed: 18, rate: "40%" },
-  { name: "Ana Costa", appointments: 44, proposals: 38, closed: 15, rate: "39%" },
-  { name: "Paula Dias", appointments: 38, proposals: 32, closed: 11, rate: "34%" },
-  { name: "Roberto Silva", appointments: 33, proposals: 28, closed: 8, rate: "29%" },
-  { name: "Carla Mendes", appointments: 30, proposals: 25, closed: 7, rate: "28%" },
-];
+import { api } from "@/lib/api";
 
 export default function Dashboard() {
+  const { data: stats, isLoading, error } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: () => api.getDashboardStats(),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground">Visão geral do desempenho da empresa</p>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-muted-foreground">Carregando estatísticas...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground">Visão geral do desempenho da empresa</p>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <p className="text-destructive mb-4">Erro ao carregar estatísticas</p>
+            <p className="text-sm text-muted-foreground">
+              {error instanceof Error ? error.message : 'Erro desconhecido'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const dashboardStats = [
+    {
+      title: "Taxa de Conversão",
+      value: `${stats.conversionRate.current}%`,
+      description: "Últimos 30 dias",
+      icon: TrendingUp,
+      trend: { value: stats.conversionRate.change, isPositive: stats.conversionRate.isPositive },
+    },
+    {
+      title: "Propostas Emitidas",
+      value: stats.proposalsIssued.current.toString(),
+      description: "Este mês",
+      icon: FileText,
+      trend: { value: stats.proposalsIssued.change, isPositive: stats.proposalsIssued.isPositive },
+    },
+    {
+      title: "Propostas Fechadas",
+      value: stats.proposalsClosed.current.toString(),
+      description: "Este mês",
+      icon: CheckCircle,
+      trend: { value: stats.proposalsClosed.change, isPositive: stats.proposalsClosed.isPositive },
+    },
+    {
+      title: "Propostas Canceladas",
+      value: stats.proposalsCancelled.current.toString(),
+      description: "Este mês",
+      icon: XCircle,
+      trend: { value: stats.proposalsCancelled.change, isPositive: stats.proposalsCancelled.isPositive },
+    },
+  ];
   return (
     <div className="space-y-6">
       <div>
@@ -58,7 +85,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
+        {dashboardStats.map((stat) => (
           <StatCard key={stat.title} {...stat} />
         ))}
       </div>
@@ -71,29 +98,35 @@ export default function Dashboard() {
                 <Calendar className="h-5 w-5 text-primary" />
                 Próximos Agendamentos
               </CardTitle>
-              <Badge variant="secondary">{upcomingAppointments.length}</Badge>
+              <Badge variant="secondary">{stats.upcomingAppointments.length}</Badge>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {upcomingAppointments.map((appointment) => (
-                <div
-                  key={appointment.id}
-                  className="flex items-center justify-between border-l-4 border-primary bg-muted/50 p-4 rounded-r-lg"
-                >
-                  <div className="space-y-1">
-                    <p className="font-medium">{appointment.client}</p>
-                    <p className="text-sm text-muted-foreground">{appointment.store}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Vendedor: {appointment.seller}
-                    </p>
+              {stats.upcomingAppointments.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">
+                  Nenhum agendamento próximo
+                </p>
+              ) : (
+                stats.upcomingAppointments.map((appointment) => (
+                  <div
+                    key={appointment.id}
+                    className="flex items-center justify-between border-l-4 border-primary bg-muted/50 p-4 rounded-r-lg"
+                  >
+                    <div className="space-y-1">
+                      <p className="font-medium">{appointment.clientName}</p>
+                      <p className="text-sm text-muted-foreground">{appointment.storeName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Vendedor: {appointment.sellerName}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{appointment.time}</p>
+                      <p className="text-xs text-muted-foreground">{appointment.date}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{appointment.time}</p>
-                    <p className="text-xs text-muted-foreground">{appointment.date}</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -107,32 +140,38 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {topSellers.map((seller, index) => (
-                <div
-                  key={seller.name}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
-                      index === 0 ? 'bg-warning text-warning-foreground' :
-                      index === 1 ? 'bg-muted-foreground/20 text-foreground' :
-                      index === 2 ? 'bg-primary/20 text-primary' :
-                      'bg-muted text-muted-foreground'
-                    }`}>
-                      {index + 1}
+              {stats.sellerRanking.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">
+                  Nenhum vendedor encontrado
+                </p>
+              ) : (
+                stats.sellerRanking.map((seller, index) => (
+                  <div
+                    key={seller.sellerId}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
+                        index === 0 ? 'bg-warning text-warning-foreground' :
+                        index === 1 ? 'bg-muted-foreground/20 text-foreground' :
+                        index === 2 ? 'bg-primary/20 text-primary' :
+                        'bg-muted text-muted-foreground'
+                      }`}>
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="font-medium">{seller.sellerName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {seller.appointments} agendamentos • {seller.proposals} propostas geradas • {seller.closed} fechamentos
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">{seller.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {seller.appointments} agendamentos • {seller.proposals} propostas geradas • {seller.closed} fechamentos
-                      </p>
-                    </div>
+                    <Badge variant="outline" className="bg-success/20 text-success border-success/30">
+                      {seller.conversionRate}%
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="bg-success/20 text-success border-success/30">
-                    {seller.rate}
-                  </Badge>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

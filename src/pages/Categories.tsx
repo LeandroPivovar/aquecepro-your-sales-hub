@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -8,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,26 +23,180 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-
-const mockCategories = [
-  { id: 1, name: "Aquecedores Solares", segment: "Residencial", description: "Sistemas completos de aquecimento solar", products: 12, status: "active" },
-  { id: 2, name: "Aquecedores a Gás", segment: "Residencial", description: "Aquecedores de passagem e acumulação", products: 8, status: "active" },
-  { id: 3, name: "Coletores", segment: "Comercial", description: "Coletores solares e placas", products: 6, status: "active" },
-  { id: 4, name: "Boilers", segment: "Comercial", description: "Reservatórios térmicos", products: 5, status: "active" },
-  { id: 5, name: "Acessórios", segment: "Residencial", description: "Controladores, sensores e acessórios", products: 14, status: "inactive" },
-];
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { api, Category, CreateCategoryRequest } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 export default function Categories() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [name, setName] = useState("");
+  const [segment, setSegment] = useState<"Residencial" | "Comercial">("Residencial");
   const [description, setDescription] = useState("");
+  const queryClient = useQueryClient();
+
+  const { data: categories = [], isLoading, error } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: () => api.getCategories(),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: CreateCategoryRequest) => api.createCategory(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast({
+        title: 'Sucesso!',
+        description: 'Categoria criada com sucesso',
+      });
+      resetForm();
+      setIsModalOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateCategoryRequest> }) =>
+      api.updateCategory(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast({
+        title: 'Sucesso!',
+        description: 'Categoria atualizada com sucesso',
+      });
+      resetForm();
+      setIsModalOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteCategory(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      toast({
+        title: 'Sucesso!',
+        description: 'Categoria removida com sucesso',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const resetForm = () => {
+    setName("");
+    setSegment("Residencial");
+    setDescription("");
+    setEditingCategory(null);
+  };
+
+  const handleOpenModal = (category?: Category) => {
+    if (category) {
+      setEditingCategory(category);
+      setName(category.name);
+      setSegment(category.segment);
+      setDescription(category.description || "");
+    } else {
+      resetForm();
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    resetForm();
+  };
 
   const handleSubmit = () => {
-    console.log({ name, description, status: "active" });
-    setIsModalOpen(false);
-    setName("");
-    setDescription("");
+    if (!name.trim()) {
+      toast({
+        title: 'Erro na validação',
+        description: 'O nome da categoria é obrigatório',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const categoryData: CreateCategoryRequest = {
+      name: name.trim(),
+      segment,
+      description: description.trim() || undefined,
+    };
+
+    if (editingCategory) {
+      updateMutation.mutate({ id: editingCategory.id, data: categoryData });
+    } else {
+      createMutation.mutate(categoryData);
+    }
   };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Tem certeza que deseja remover esta categoria?')) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Categorias</h1>
+            <p className="text-muted-foreground">Organize os produtos em categorias</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-muted-foreground">Carregando categorias...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Categorias</h1>
+            <p className="text-muted-foreground">Organize os produtos em categorias</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <p className="text-destructive mb-4">Erro ao carregar categorias</p>
+            <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['categories'] })}>
+              Tentar novamente
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -50,7 +205,7 @@ export default function Categories() {
           <h1 className="text-3xl font-bold text-foreground">Categorias</h1>
           <p className="text-muted-foreground">Organize os produtos em categorias</p>
         </div>
-        <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
+        <Button className="gap-2" onClick={() => handleOpenModal()}>
           <Plus className="h-4 w-4" />
           Nova Categoria
         </Button>
@@ -68,42 +223,67 @@ export default function Categories() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockCategories.map((category) => (
-              <TableRow key={category.id}>
-                <TableCell className="font-medium">{category.name}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="bg-info/20 text-info border-info/30">
-                    {category.segment}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={category.status as any} />
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{category.products}</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
+            {categories.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  Nenhuma categoria cadastrada. Clique em "Nova Categoria" para começar.
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              categories.map((category) => (
+                <TableRow key={category.id}>
+                  <TableCell className="font-medium">{category.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="bg-info/20 text-info border-info/30">
+                      {category.segment}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={category.status as any} />
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{category.productsCount || 0}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleOpenModal(category)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(category.id)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {deleteMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-destructive" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        )}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Nova Categoria</DialogTitle>
+            <DialogTitle>
+              {editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
+            </DialogTitle>
             <DialogDescription>
-              Cadastre uma nova categoria de produtos
+              {editingCategory
+                ? 'Atualize as informações da categoria'
+                : 'Cadastre uma nova categoria de produtos'}
             </DialogDescription>
           </DialogHeader>
 
@@ -115,7 +295,25 @@ export default function Categories() {
                 placeholder="Ex: Aquecedores Solares"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                disabled={createMutation.isPending || updateMutation.isPending}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cat-segment">Segmento *</Label>
+              <Select
+                value={segment}
+                onValueChange={(value) => setSegment(value as "Residencial" | "Comercial")}
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                <SelectTrigger id="cat-segment">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Residencial">Residencial</SelectItem>
+                  <SelectItem value="Comercial">Comercial</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -126,15 +324,32 @@ export default function Categories() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
+                disabled={createMutation.isPending || updateMutation.isPending}
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={handleCloseModal}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleSubmit}>Criar Categoria</Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {createMutation.isPending || updateMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {editingCategory ? 'Salvando...' : 'Criando...'}
+                </>
+              ) : (
+                editingCategory ? 'Salvar Alterações' : 'Criar Categoria'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -7,13 +7,15 @@ type Status =
   | "cancelled" 
   | "completed"
   | "active"
-  | "inactive";
+  | "inactive"
+  | "draft";
 
 interface StatusBadgeProps {
-  status: Status;
+  status: Status | string;
 }
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; className: string }> = {
+  draft: { label: "Rascunho", className: "bg-muted/50 text-muted-foreground border-muted-foreground/30" },
   pending: { label: "Pendente", className: "bg-warning/20 text-warning border-warning/30" },
   scheduled: { label: "Agendado", className: "bg-info/20 text-info border-info/30" },
   approved: { label: "Aprovado", className: "bg-success/20 text-success border-success/30" },
@@ -24,7 +26,10 @@ const statusConfig = {
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const config = statusConfig[status];
+  const config = statusConfig[status] || { 
+    label: status || "Desconhecido", 
+    className: "bg-muted/50 text-muted-foreground border-muted-foreground/30" 
+  };
   
   return (
     <Badge variant="outline" className={config.className}>

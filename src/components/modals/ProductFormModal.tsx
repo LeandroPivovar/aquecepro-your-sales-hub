@@ -1,5 +1,9 @@
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { api, CreateProductRequest } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -146,32 +150,128 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
     return categories2Fields[key] || [];
   };
 
+  const queryClient = useQueryClient();
+
+  const createMutation = useMutation({
+    mutationFn: (data: CreateProductRequest) => api.createProduct(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({
+        title: 'Sucesso!',
+        description: 'Produto criado com sucesso',
+      });
+      onOpenChange(false);
+      // Resetar formulário
+      resetForm();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const resetForm = () => {
+    setSegment('');
+    setCategory1('');
+    setCategory2('');
+    setCode('');
+    setDescription('');
+    setProposalDescription('');
+    setThermalCapacity26('');
+    setThermalCapacity15('');
+    setElectricConsumption26('');
+    setElectricConsumption15('');
+    setIdealFlowRate('');
+    setVolume('');
+    setResistancePower('');
+    setCollectorArea('');
+    setCollectorProduction('');
+    setNominalPower('');
+    setHeaterEfficiency('');
+    setGasType('');
+    setFlowAt15mca('');
+    setSimultaneousFlow20C('');
+    setCost('');
+    setSaleValue('');
+  };
+
   const handleSubmit = () => {
-    console.log({
-      segment,
-      category1,
-      category2,
+    if (!segment || !category1 || !category2 || !code || !description || !proposalDescription || !cost || !saleValue) {
+      toast({
+        title: 'Erro na validação',
+        description: 'Preencha todos os campos obrigatórios',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const activeFields = getActiveFields();
+    const technicalSpecs: Record<string, any> = {};
+
+    // Adicionar apenas os campos ativos ao technicalSpecs
+    activeFields.forEach((field) => {
+      switch (field) {
+        case 'thermalCapacity26':
+          if (thermalCapacity26) technicalSpecs.thermalCapacity26 = parseFloat(thermalCapacity26);
+          break;
+        case 'thermalCapacity15':
+          if (thermalCapacity15) technicalSpecs.thermalCapacity15 = parseFloat(thermalCapacity15);
+          break;
+        case 'electricConsumption26':
+          if (electricConsumption26) technicalSpecs.electricConsumption26 = parseFloat(electricConsumption26);
+          break;
+        case 'electricConsumption15':
+          if (electricConsumption15) technicalSpecs.electricConsumption15 = parseFloat(electricConsumption15);
+          break;
+        case 'idealFlowRate':
+          if (idealFlowRate) technicalSpecs.idealFlowRate = parseFloat(idealFlowRate);
+          break;
+        case 'volume':
+          if (volume) technicalSpecs.volume = parseFloat(volume);
+          break;
+        case 'resistancePower':
+          if (resistancePower) technicalSpecs.resistancePower = parseFloat(resistancePower);
+          break;
+        case 'collectorArea':
+          if (collectorArea) technicalSpecs.collectorArea = parseFloat(collectorArea);
+          break;
+        case 'collectorProduction':
+          if (collectorProduction) technicalSpecs.collectorProduction = parseFloat(collectorProduction);
+          break;
+        case 'nominalPower':
+          if (nominalPower) technicalSpecs.nominalPower = parseFloat(nominalPower);
+          break;
+        case 'heaterEfficiency':
+          if (heaterEfficiency) technicalSpecs.heaterEfficiency = parseFloat(heaterEfficiency);
+          break;
+        case 'gasType':
+          if (gasType) technicalSpecs.gasType = gasType;
+          break;
+        case 'flowAt15mca':
+          if (flowAt15mca) technicalSpecs.flowAt15mca = parseFloat(flowAt15mca);
+          break;
+        case 'simultaneousFlow20C':
+          if (simultaneousFlow20C) technicalSpecs.simultaneousFlow20C = parseFloat(simultaneousFlow20C);
+          break;
+      }
+    });
+
+    const productData: CreateProductRequest = {
       code,
       description,
       proposalDescription,
-      thermalCapacity26: parseFloat(thermalCapacity26),
-      thermalCapacity15: parseFloat(thermalCapacity15),
-      electricConsumption26: parseFloat(electricConsumption26),
-      electricConsumption15: parseFloat(electricConsumption15),
-      idealFlowRate: parseFloat(idealFlowRate),
-      volume: parseFloat(volume),
-      resistancePower: parseFloat(resistancePower),
-      collectorArea: parseFloat(collectorArea),
-      collectorProduction: parseFloat(collectorProduction),
-      nominalPower: parseFloat(nominalPower),
-      heaterEfficiency: parseFloat(heaterEfficiency),
-      gasType,
-      flowAt15mca: parseFloat(flowAt15mca),
-      simultaneousFlow20C: parseFloat(simultaneousFlow20C),
+      segment: segment as 'Residencial' | 'Comercial',
+      category1,
+      category2,
+      technicalSpecs: Object.keys(technicalSpecs).length > 0 ? technicalSpecs : undefined,
       cost: parseFloat(cost),
       saleValue: parseFloat(saleValue),
-    });
-    onOpenChange(false);
+    };
+
+    createMutation.mutate(productData);
   };
 
   return (
@@ -528,10 +628,19 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={createMutation.isPending}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit}>Cadastrar Produto</Button>
+          <Button onClick={handleSubmit} disabled={createMutation.isPending}>
+            {createMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Cadastrando...
+              </>
+            ) : (
+              'Cadastrar Produto'
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

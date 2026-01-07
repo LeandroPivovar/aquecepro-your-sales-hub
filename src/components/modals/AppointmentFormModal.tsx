@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,91 +20,168 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
-interface Appointment {
-  id: number;
-  date: string;
-  time: string;
-  client: string;
-  store: string;
-  seller: string;
-  address: string;
-  status: string;
-}
+import { api, CreateAppointmentRequest, Appointment, Store, User } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 interface AppointmentFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   appointment?: Appointment | null;
+  initialData?: Partial<Pick<Appointment, 'clientId' | 'address'>>;
 }
 
-const mockStores = ["Loja Centro", "Loja Norte", "Loja Sul"];
-const mockSellers = ["João Santos", "Ana Costa", "Paula Dias", "Roberto Silva"];
-const mockLeads = ["Maria Silva", "Carlos Souza", "Pedro Lima", "Juliana Rocha"];
-
-export function AppointmentFormModal({ open, onOpenChange, appointment }: AppointmentFormModalProps) {
+export function AppointmentFormModal({ open, onOpenChange, appointment, initialData }: AppointmentFormModalProps) {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
-  const [store, setStore] = useState("");
-  const [sellerMode, setSellerMode] = useState("manual");
-  const [seller, setSeller] = useState("");
-  const [lead, setLead] = useState("");
+  const [storeId, setStoreId] = useState("");
+  const [sellerMode, setSellerMode] = useState<"manual" | "auto">("manual");
+  const [sellerId, setSellerId] = useState("");
+  const [clientId, setClientId] = useState("");
   const [address, setAddress] = useState("");
   const [duration, setDuration] = useState("60");
-  const [status, setStatus] = useState("scheduled");
-  const [channel, setChannel] = useState("google");
+  const [status, setStatus] = useState<"scheduled" | "pending" | "completed" | "cancelled">("scheduled");
+  const [channel, setChannel] = useState<"google" | "presencial">("presencial");
+  const queryClient = useQueryClient();
 
-  const isEditMode = !!appointment;
+  // Buscar lojas, vendedores e clientes/leads
+  const { data: stores = [] } = useQuery<Store[]>({
+    queryKey: ['stores'],
+    queryFn: () => api.getStores(),
+  });
 
-  // Preencher formulário quando em modo de edição
+  const { data: sellers = [] } = useQuery<User[]>({
+    queryKey: ['users'],
+    queryFn: () => api.getUsers(),
+    select: (users) => users.filter((u) => u.role === 'seller' && u.isActive),
+  });
+
+  const { data: clients = [] } = useQuery<User[]>({
+    queryKey: ['users'],
+    queryFn: () => api.getUsers(),
+    select: (users) => users.filter((u) => (u.type === 'lead' || u.type === 'cliente') && u.isActive),
+  });
+
   useEffect(() => {
-    if (appointment) {
-      setDate(appointment.date);
+    if (appointment && open) {
+      setDate(appointment.date.split('T')[0]);
       setTime(appointment.time);
-      setStore(appointment.store);
-      setSeller(appointment.seller);
-      setLead(appointment.client);
+      setStoreId(appointment.storeId);
+      setSellerId(appointment.sellerId || "");
+      setSellerMode(appointment.autoAssign ? "auto" : "manual");
+      setClientId(appointment.clientId);
       setAddress(appointment.address);
+      setDuration(appointment.duration.toString());
       setStatus(appointment.status);
-    } else {
-      // Resetar formulário quando não estiver editando
+      setChannel(appointment.channel);
+    } else if (!appointment && open) {
+      // Se tiver initialData, usar para pré-preencher
+      if (initialData) {
+        setClientId(initialData.clientId || "");
+        setAddress(initialData.address || "");
+      } else {
+        setClientId("");
+        setAddress("");
+      }
       setDate("");
       setTime("");
-      setStore("");
-      setSeller("");
-      setLead("");
-      setAddress("");
+      setStoreId("");
+      setSellerId("");
+      setSellerMode("manual");
       setDuration("60");
       setStatus("scheduled");
-      setChannel("google");
-      setSellerMode("manual");
+      setChannel("presencial");
     }
-  }, [appointment]);
+  }, [appointment, open, initialData]);
+
+  const createMutation = useMutation({
+    mutationFn: (data: CreateAppointmentRequest) => api.createAppointment(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast({
+        title: 'Sucesso!',
+        description: 'Agendamento criado com sucesso',
+      });
+      onOpenChange(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateAppointmentRequest> }) =>
+      api.updateAppointment(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast({
+        title: 'Sucesso!',
+        description: 'Agendamento atualizado com sucesso',
+      });
+      onOpenChange(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
 
   const handleSubmit = () => {
-    console.log({
-      id: appointment?.id,
+    if (!date || !time || !storeId || !clientId || !address) {
+      toast({
+        title: 'Erro na validação',
+        description: 'Preencha todos os campos obrigatórios',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (sellerMode === "manual" && !sellerId) {
+      toast({
+        title: 'Erro na validação',
+        description: 'Selecione um vendedor ou escolha rodízio automático',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const appointmentData: CreateAppointmentRequest = {
       date,
       time,
-      store,
-      seller: sellerMode === "auto" ? "Rodízio automático" : seller,
-      lead,
-      address,
-      duration,
+      storeId,
+      sellerId: sellerMode === "manual" ? sellerId : undefined,
+      clientId,
+      address: address.trim(),
+      duration: parseInt(duration, 10),
       status,
       channel,
-    });
-    onOpenChange(false);
+      autoAssign: sellerMode === "auto",
+    };
+
+    if (appointment) {
+      updateMutation.mutate({ id: appointment.id, data: appointmentData });
+    } else {
+      createMutation.mutate(appointmentData);
+    }
   };
+
+  const isLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? "Editar Agendamento" : "Novo Agendamento"}</DialogTitle>
+          <DialogTitle>{appointment ? "Editar Agendamento" : "Novo Agendamento"}</DialogTitle>
           <DialogDescription>
-            {isEditMode 
-              ? "Atualize as informações do agendamento" 
+            {appointment
+              ? "Atualize as informações do agendamento"
               : "Agende uma visita técnica ou reunião com o cliente"}
           </DialogDescription>
         </DialogHeader>
@@ -117,6 +195,7 @@ export function AppointmentFormModal({ open, onOpenChange, appointment }: Appoin
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -126,20 +205,21 @@ export function AppointmentFormModal({ open, onOpenChange, appointment }: Appoin
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
+                disabled={isLoading}
               />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="store">Loja *</Label>
-            <Select value={store} onValueChange={setStore}>
+            <Select value={storeId} onValueChange={setStoreId} disabled={isLoading}>
               <SelectTrigger id="store">
                 <SelectValue placeholder="Selecione a loja" />
               </SelectTrigger>
               <SelectContent>
-                {mockStores.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
+                {stores.map((store) => (
+                  <SelectItem key={store.id} value={store.id}>
+                    {store.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -148,7 +228,7 @@ export function AppointmentFormModal({ open, onOpenChange, appointment }: Appoin
 
           <div className="space-y-4">
             <Label>Atribuição de Vendedor</Label>
-            <RadioGroup value={sellerMode} onValueChange={setSellerMode}>
+            <RadioGroup value={sellerMode} onValueChange={(value) => setSellerMode(value as typeof sellerMode)} disabled={isLoading}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="manual" id="manual" />
                 <Label htmlFor="manual" className="font-normal cursor-pointer">
@@ -164,14 +244,14 @@ export function AppointmentFormModal({ open, onOpenChange, appointment }: Appoin
             </RadioGroup>
 
             {sellerMode === "manual" && (
-              <Select value={seller} onValueChange={setSeller}>
+              <Select value={sellerId} onValueChange={setSellerId} disabled={isLoading}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o vendedor" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockSellers.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
+                  {sellers.map((seller) => (
+                    <SelectItem key={seller.id} value={seller.id}>
+                      {seller.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -180,15 +260,15 @@ export function AppointmentFormModal({ open, onOpenChange, appointment }: Appoin
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="lead">Cliente / Lead *</Label>
-            <Select value={lead} onValueChange={setLead}>
-              <SelectTrigger id="lead">
-                <SelectValue placeholder="Selecione o lead" />
+            <Label htmlFor="client">Cliente / Lead *</Label>
+            <Select value={clientId} onValueChange={setClientId} disabled={isLoading}>
+              <SelectTrigger id="client">
+                <SelectValue placeholder="Selecione o cliente ou lead" />
               </SelectTrigger>
               <SelectContent>
-                {mockLeads.map((l) => (
-                  <SelectItem key={l} value={l}>
-                    {l}
+                {clients.map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -203,6 +283,7 @@ export function AppointmentFormModal({ open, onOpenChange, appointment }: Appoin
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               rows={3}
+              disabled={isLoading}
             />
           </div>
 
@@ -216,11 +297,12 @@ export function AppointmentFormModal({ open, onOpenChange, appointment }: Appoin
                 step="15"
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
+              <Select value={status} onValueChange={(value) => setStatus(value as typeof status)} disabled={isLoading}>
                 <SelectTrigger id="status">
                   <SelectValue />
                 </SelectTrigger>
@@ -236,7 +318,7 @@ export function AppointmentFormModal({ open, onOpenChange, appointment }: Appoin
 
           <div className="space-y-2">
             <Label>Canal do Agendamento</Label>
-            <RadioGroup value={channel} onValueChange={setChannel}>
+            <RadioGroup value={channel} onValueChange={(value) => setChannel(value as typeof channel)} disabled={isLoading}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="google" id="google" />
                 <Label htmlFor="google" className="font-normal cursor-pointer">
@@ -254,11 +336,22 @@ export function AppointmentFormModal({ open, onOpenChange, appointment }: Appoin
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}
+          >
             Cancelar
           </Button>
-          <Button onClick={handleSubmit}>
-            {isEditMode ? "Salvar Alterações" : "Criar Agendamento"}
+          <Button onClick={handleSubmit} disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {appointment ? 'Salvando...' : 'Criando...'}
+              </>
+            ) : (
+              appointment ? "Salvar Alterações" : "Criar Agendamento"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -8,21 +9,92 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { ProductFormModal } from "@/components/modals/ProductFormModal";
-
-const mockProducts = [
-  { id: 1, name: "Aquecedor Solar 200L", sku: "AQS-200", segment: "Residencial", category: "Aquecedores Solares", price: "R$ 2.500,00", status: "active", stores: 3 },
-  { id: 2, name: "Aquecedor a Gás 15L", sku: "AQG-15", segment: "Residencial", category: "Aquecedores a Gás", price: "R$ 1.200,00", status: "active", stores: 3 },
-  { id: 3, name: "Coletor Solar Premium", sku: "COL-PRM", segment: "Comercial", category: "Coletores", price: "R$ 800,00", status: "active", stores: 2 },
-  { id: 4, name: "Boiler Inox 300L", sku: "BOI-300", segment: "Comercial", category: "Boilers", price: "R$ 1.800,00", status: "active", stores: 3 },
-  { id: 5, name: "Controlador Digital", sku: "CTL-DIG", segment: "Residencial", category: "Acessórios", price: "R$ 350,00", status: "inactive", stores: 3 },
-];
+import { api, Product } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 export default function Products() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: products = [], isLoading, error } = useQuery<Product[]>({
+    queryKey: ['products'],
+    queryFn: () => api.getProducts(),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteProduct(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({
+        title: 'Sucesso!',
+        description: 'Produto removido com sucesso',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const formatPrice = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Tem certeza que deseja remover este produto?')) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Estoque</h1>
+            <p className="text-muted-foreground">Gerencie o catálogo de produtos</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-muted-foreground">Carregando produtos...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Estoque</h1>
+            <p className="text-muted-foreground">Gerencie o catálogo de produtos</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <p className="text-destructive mb-4">Erro ao carregar produtos</p>
+            <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['products'] })}>
+              Tentar novamente
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -46,48 +118,69 @@ export default function Products() {
               <TableHead>Categoria</TableHead>
               <TableHead>Preço</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Disponível em</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockProducts.map((product) => (
-              <TableRow key={product.id}>
-                <TableCell className="font-medium">{product.name}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="bg-info/20 text-info border-info/30">
-                    {product.segment}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="bg-secondary/20 text-secondary border-secondary/30">
-                    {product.category}
-                  </Badge>
-                </TableCell>
-                <TableCell className="font-medium">{product.price}</TableCell>
-                <TableCell>
-                  <StatusBadge status={product.status as any} />
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{product.stores} lojas</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon">
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
+            {products.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  Nenhum produto cadastrado. Clique em "Novo Produto" para começar.
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              products.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell className="font-medium">{product.description}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="bg-info/20 text-info border-info/30">
+                      {product.segment}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="bg-secondary/20 text-secondary border-secondary/30">
+                      {product.category2}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">{formatPrice(product.saleValue)}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={product.status as any} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(product.id)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {deleteMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-destructive" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        )}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
 
-      <ProductFormModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+      <ProductFormModal
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          setIsModalOpen(open);
+          if (!open) {
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+          }
+        }}
+      />
     </div>
   );
 }

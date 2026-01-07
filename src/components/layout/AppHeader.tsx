@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,8 +12,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function AppHeader() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-6">
       <SidebarTrigger className="-ml-2" />
@@ -40,7 +54,7 @@ export function AppHeader() {
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
               <Avatar>
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  JP
+                  {user ? getInitials(user.name) : 'U'}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -48,15 +62,19 @@ export function AppHeader() {
           <DropdownMenuContent align="end" className="w-56 bg-popover">
             <DropdownMenuLabel>
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">João Paulo</p>
-                <p className="text-xs text-muted-foreground">joao@aquecepro.com</p>
+                <p className="text-sm font-medium">{user?.name || 'Usuário'}</p>
+                <p className="text-xs text-muted-foreground">{user?.email || ''}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Minha Conta</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/conta')}>
+              Minha Conta
+            </DropdownMenuItem>
             <DropdownMenuItem>Configurações</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Sair</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" onClick={logout}>
+              Sair
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
