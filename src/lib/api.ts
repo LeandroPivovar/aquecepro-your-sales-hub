@@ -1,4 +1,7 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Em produção, usa URL relativa (/api/) para o Nginx fazer proxy
+// Em desenvolvimento, usa localhost:3020 ou a variável de ambiente
+const API_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? '/api' : 'http://localhost:3020/api');
 
 export interface LoginRequest {
   email: string;
