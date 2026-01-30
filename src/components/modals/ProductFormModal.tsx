@@ -29,11 +29,11 @@ interface ProductFormModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const mockSegments = ["Residencial", "Comercial"];
+const mockSegments = ["piscina", "residencia"];
 
 const categoriesBySegment: Record<string, string[]> = {
-  Residencial: ["Equipamentos", "Serviços"],
-  Comercial: ["Aquecedores Solares", "Aquecedores a Gás", "Bombas de Calor", "Acessórios"],
+  residencia: ["Equipamentos", "Serviços"],
+  piscina: ["Aquecedores Solares", "Aquecedores a Gás", "Bombas de Calor", "Acessórios"],
 };
 
 const categories2ByCategory1: Record<string, string[]> = {
@@ -263,7 +263,7 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
       code,
       description,
       proposalDescription,
-      segment: segment as 'Residencial' | 'Comercial',
+      segment: segment as 'piscina' | 'residencia',
       category1,
       category2,
       technicalSpecs: Object.keys(technicalSpecs).length > 0 ? technicalSpecs : undefined,
@@ -288,7 +288,7 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
           {/* Informações Básicas */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Informações Básicas</h3>
-            
+
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="segment">Segmento *</Label>
@@ -377,7 +377,7 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
           {/* Características Técnicas */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Características Técnicas</h3>
-            
+
             {getActiveFields().length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Selecione a Categoria 2 para ver os campos necessários.
@@ -598,7 +598,7 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
           {/* Valores Financeiros */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Valores Financeiros</h3>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="cost">Custo (R$) *</Label>

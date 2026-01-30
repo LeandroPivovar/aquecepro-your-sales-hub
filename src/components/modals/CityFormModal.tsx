@@ -54,18 +54,34 @@ export function CityFormModal({ open, onOpenChange, city }: CityFormModalProps) 
     if (city && open) {
       setName(city.name);
       setLatitude(city.latitude.toString());
-      setMonthlyData(
-        city.monthlyData.map((data) => ({
-          month: data.month,
-          temperature: data.temperature.toString(),
-          solarRadiation: data.solarRadiation.toString(),
-          windSpeed: data.windSpeed.toString(),
-        }))
+
+      // Criar mapa dos dados existentes
+      const existingData = new Map(
+        city.monthlyData.map(data => [data.month, data])
       );
+
+      // Preencher todos os 12 meses, usando dados existentes ou vazio
+      const fullData = months.map(month => {
+        const existing = existingData.get(month);
+        return {
+          month,
+          temperature: existing?.temperature?.toString() || "",
+          solarRadiation: existing?.solarRadiation?.toString() || "",
+          windSpeed: existing?.windSpeed?.toString() || "",
+        };
+      });
+
+      setMonthlyData(fullData);
     } else if (!city && open) {
       setName("");
       setLatitude("");
-      setMonthlyData([]);
+      // Inicializar com 12 meses vazios
+      setMonthlyData(months.map(month => ({
+        month,
+        temperature: "",
+        solarRadiation: "",
+        windSpeed: ""
+      })));
     }
   }, [city, open]);
 
@@ -108,17 +124,6 @@ export function CityFormModal({ open, onOpenChange, city }: CityFormModalProps) 
     },
   });
 
-  const addMonthlyData = () => {
-    setMonthlyData([
-      ...monthlyData,
-      { month: "", temperature: "", solarRadiation: "", windSpeed: "" }
-    ]);
-  };
-
-  const removeMonthlyData = (index: number) => {
-    setMonthlyData(monthlyData.filter((_, i) => i !== index));
-  };
-
   const updateMonthlyData = (index: number, field: string, value: string) => {
     const updated = [...monthlyData];
     updated[index] = { ...updated[index], [field]: value };
@@ -135,17 +140,28 @@ export function CityFormModal({ open, onOpenChange, city }: CityFormModalProps) 
       return;
     }
 
+    // Filtrar apenas meses preenchidos
+    const filledMonths = monthlyData.filter(
+      data => data.temperature && data.solarRadiation && data.windSpeed
+    );
+
+    if (filledMonths.length === 0) {
+      toast({
+        title: 'Aviso',
+        description: 'Nenhum mês foi preenchido. A cidade será criada sem dados climáticos.',
+        variant: 'default',
+      });
+    }
+
     const cityData: CreateCityRequest = {
       name: name.trim(),
       latitude: parseFloat(latitude),
-      monthlyData: monthlyData
-        .filter((data) => data.month && data.temperature && data.solarRadiation && data.windSpeed)
-        .map((data) => ({
-          month: data.month,
-          temperature: parseFloat(data.temperature),
-          solarRadiation: parseFloat(data.solarRadiation),
-          windSpeed: parseFloat(data.windSpeed),
-        })),
+      monthlyData: filledMonths.map((data) => ({
+        month: data.month,
+        temperature: parseFloat(data.temperature),
+        solarRadiation: parseFloat(data.solarRadiation),
+        windSpeed: parseFloat(data.windSpeed),
+      })),
     };
 
     if (city) {
@@ -211,55 +227,16 @@ export function CityFormModal({ open, onOpenChange, city }: CityFormModalProps) 
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label>Dados Mensais</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addMonthlyData}
-                disabled={isLoading}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Mês
-              </Button>
+              <Label>Dados Mensais (12 Meses)</Label>
             </div>
 
             {monthlyData.map((data, index) => (
               <div key={index} className="rounded-lg border p-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label>Dados do Mês {index + 1}</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeMonthlyData(index)}
-                    disabled={isLoading}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <Label className="text-lg font-semibold text-primary">{data.month}</Label>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Mês *</Label>
-                    <Select
-                      value={data.month}
-                      onValueChange={(value) => updateMonthlyData(index, 'month', value)}
-                      disabled={isLoading}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o mês" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {months.map((m) => (
-                          <SelectItem key={m} value={m}>
-                            {m}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Temperatura (°C) *</Label>
                     <Input
@@ -285,11 +262,11 @@ export function CityFormModal({ open, onOpenChange, city }: CityFormModalProps) 
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Velocidade do Vento (m/s) *</Label>
+                    <Label>Velocidade do Vento (km/h) *</Label>
                     <Input
                       type="number"
                       step="0.1"
-                      placeholder="Ex: 3.5"
+                      placeholder="Ex: 12.6"
                       value={data.windSpeed}
                       onChange={(e) => updateMonthlyData(index, 'windSpeed', e.target.value)}
                       disabled={isLoading}
@@ -298,12 +275,6 @@ export function CityFormModal({ open, onOpenChange, city }: CityFormModalProps) 
                 </div>
               </div>
             ))}
-
-            {monthlyData.length === 0 && (
-              <div className="text-center text-muted-foreground py-8 border rounded-lg">
-                Nenhum dado mensal adicionado. Clique em "Adicionar Mês" para começar.
-              </div>
-            )}
           </div>
         </div>
 

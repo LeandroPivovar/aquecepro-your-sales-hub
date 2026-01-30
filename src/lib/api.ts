@@ -1,6 +1,6 @@
 // Em produção, usa URL relativa (/api/) para o Nginx fazer proxy
 // Em desenvolvimento, usa localhost:3020 ou a variável de ambiente
-const API_URL = import.meta.env.VITE_API_URL || 
+const API_URL = import.meta.env.VITE_API_URL ||
   (import.meta.env.PROD ? '/api' : 'http://localhost:3020/api');
 
 export interface LoginRequest {
@@ -48,7 +48,7 @@ export interface Product {
   code: string;
   description: string;
   proposalDescription: string;
-  segment: 'Residencial' | 'Comercial';
+  segment: 'piscina' | 'residencia';
   category1: string;
   category2: string;
   technicalSpecs?: Record<string, any>;
@@ -63,7 +63,7 @@ export interface CreateProductRequest {
   code: string;
   description: string;
   proposalDescription: string;
-  segment: 'Residencial' | 'Comercial';
+  segment: 'piscina' | 'residencia';
   category1: string;
   category2: string;
   technicalSpecs?: Record<string, any>;
@@ -75,7 +75,7 @@ export interface CreateProductRequest {
 export interface Category {
   id: string;
   name: string;
-  segment: 'Residencial' | 'Comercial';
+  segment: 'piscina' | 'residencia';
   description?: string;
   status: 'active' | 'inactive';
   createdAt: string;
@@ -85,7 +85,7 @@ export interface Category {
 
 export interface CreateCategoryRequest {
   name: string;
-  segment: 'Residencial' | 'Comercial';
+  segment: 'piscina' | 'residencia';
   description?: string;
   status?: 'active' | 'inactive';
 }

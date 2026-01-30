@@ -19,8 +19,11 @@ import {
 import { api, City } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 
-const calculateAverage = (data: number[]) => {
-  return (data.reduce((a, b) => a + b, 0) / data.length).toFixed(2);
+const calculateAverage = (data: (number | string)[]) => {
+  if (!data || data.length === 0) return "0.00";
+  const validNumbers = data.map(n => parseFloat(n.toString())).filter(n => !isNaN(n));
+  if (validNumbers.length === 0) return "0.00";
+  return (validNumbers.reduce((a, b) => a + b, 0) / validNumbers.length).toFixed(2);
 };
 
 export default function Cities() {
@@ -145,9 +148,9 @@ export default function Cities() {
                 onOpenChange={() => setExpandedCity(isExpanded ? null : city.id)}
               >
                 <div className="rounded-lg border bg-card">
-                  <CollapsibleTrigger className="w-full">
-                    <div className="flex items-center justify-between p-4 hover:bg-accent/50 transition-colors">
-                      <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between p-4 hover:bg-accent/50 transition-colors">
+                    <CollapsibleTrigger asChild>
+                      <div className="flex items-center gap-3 cursor-pointer flex-1">
                         <ChevronRight
                           className={`h-5 w-5 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                         />
@@ -158,43 +161,44 @@ export default function Cities() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-6 mr-4">
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground">Temp. Média</div>
-                          <div className="font-semibold">{avgTemp}°C</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground">Radiação Solar</div>
-                          <div className="font-semibold">{avgSolarRadiation} kWh/m²</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground">Vento Médio</div>
-                          <div className="font-semibold">{avgWindSpeed} m/s</div>
-                        </div>
-                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenModal(city)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(city.id)}
-                            disabled={deleteMutation.isPending}
-                          >
-                            {deleteMutation.isPending ? (
-                              <Loader2 className="h-4 w-4 animate-spin text-destructive" />
-                            ) : (
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            )}
-                          </Button>
-                        </div>
+                    </CollapsibleTrigger>
+
+                    <div className="flex items-center gap-6 mr-4">
+                      <div className="text-center">
+                        <div className="text-xs text-muted-foreground">Temp. Média</div>
+                        <div className="font-semibold">{avgTemp}°C</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xs text-muted-foreground">Radiação Solar</div>
+                        <div className="font-semibold">{avgSolarRadiation} kWh/m²</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xs text-muted-foreground">Vento Médio</div>
+                        <div className="font-semibold">{avgWindSpeed} km/h</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenModal(city)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(city.id)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          {deleteMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-destructive" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          )}
+                        </Button>
                       </div>
                     </div>
-                  </CollapsibleTrigger>
+                  </div>
 
                   <CollapsibleContent>
                     <div className="border-t">
@@ -205,7 +209,7 @@ export default function Cities() {
                             <TableHead>Temperatura (°C)</TableHead>
                             <TableHead>Radiação Solar (kWh/m²)</TableHead>
                             <TableHead>Latitude</TableHead>
-                            <TableHead>Velocidade Vento (m/s)</TableHead>
+                            <TableHead>Velocidade Vento (km/h)</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>

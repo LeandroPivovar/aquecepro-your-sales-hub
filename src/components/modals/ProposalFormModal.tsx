@@ -147,7 +147,7 @@ interface MachineSelection {
 export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalFormModalProps) {
   const queryClient = useQueryClient();
   const isEditMode = !!proposal;
-  
+
   // Segmentação
   const [segment, setSegment] = useState<"piscina" | "residencial" | null>(proposal?.segment || null);
 
@@ -161,27 +161,27 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
   // Serviços Adicionais
   const [needsInstallation, setNeedsInstallation] = useState(true);
   const [needsProject, setNeedsProject] = useState(true);
-  
+
   // Temperatura de Consumo (Piscina)
   const [consumptionTemp, setConsumptionTemp] = useState("40");
   const [consumptionTempCustom, setConsumptionTempCustom] = useState("");
-  
+
   // Serviços Adicionais - Piscina
   const [hasFiltrationSystem, setHasFiltrationSystem] = useState(false);
   const [hasLighting, setHasLighting] = useState(false);
   const [hasOzone, setHasOzone] = useState(false);
   const [hasChlorineGenerator, setHasChlorineGenerator] = useState(false);
   const [hasWaterfallService, setHasWaterfallService] = useState(false);
-  
+
   // Circulação de Rede (Residencial)
   const [hasNetworkCirculation, setHasNetworkCirculation] = useState(false);
   const [networkCirculationQuantity, setNetworkCirculationQuantity] = useState("");
-  
+
   // Sistema de Pressurização (Residencial)
   const [hasPressurizationSystem, setHasPressurizationSystem] = useState(false);
   const [shower1Quantity, setShower1Quantity] = useState("");
   const [shower2Quantity, setShower2Quantity] = useState("");
-  
+
   // Estrutura para Laje (Residencial)
   const [hasLajeStructure, setHasLajeStructure] = useState(false);
 
@@ -224,6 +224,12 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
   const [heatingTime, setHeatingTime] = useState(0);
   const [energyConsumption, setEnergyConsumption] = useState({ initial: 0, daily: 0 });
 
+  // Buscar cidades do banco
+  const { data: cities = [] } = useQuery({
+    queryKey: ['cities'],
+    queryFn: () => api.getCities(),
+  });
+
   // Formulário Residencial
   // Chuveiros
   // Chuveiro 01
@@ -231,19 +237,19 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
   const [shower1FlowCustom, setShower1FlowCustom] = useState("");
   const [shower1Time, setShower1Time] = useState("");
   const [shower1TimeCustom, setShower1TimeCustom] = useState("");
-  
+
   // Chuveiro 02
   const [shower2Flow, setShower2Flow] = useState("");
   const [shower2FlowCustom, setShower2FlowCustom] = useState("");
   const [shower2Time, setShower2Time] = useState("");
   const [shower2TimeCustom, setShower2TimeCustom] = useState("");
-  
+
   // Torneiras Banheiro
   const [bathroomFlow, setBathroomFlow] = useState("");
   const [bathroomFlowCustom, setBathroomFlowCustom] = useState("");
   const [bathroomTime, setBathroomTime] = useState("");
   const [bathroomTimeCustom, setBathroomTimeCustom] = useState("");
-  
+
   // Banheira
   const [bathtubFlow, setBathtubFlow] = useState("");
   const [bathtubFlowCustom, setBathtubFlowCustom] = useState("");
@@ -266,7 +272,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
 
   // Tipos de Sistemas de Aquecimento (Residencial)
   const [selectedHeatingTypes, setSelectedHeatingTypes] = useState<string[]>([]);
-  
+
   // Equipamentos selecionados por tipo de sistema
   const [selectedEquipments, setSelectedEquipments] = useState<Record<string, string[]>>({});
 
@@ -297,10 +303,10 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
   // Filtrar produtos por tipo de sistema de aquecimento
   const getEquipmentsByHeatingType = (heatingType: string): Product[] => {
     if (!products.length) return [];
-    
+
     // Filtrar apenas produtos residenciais e ativos
     const residentialProducts = products.filter(
-      (p) => p.segment === "Residencial" && p.status === "active"
+      (p) => p.segment === "residencia" && p.status === "active"
     );
 
     // Mapear tipos de sistemas para categorias de produtos (normalizado para comparação)
@@ -338,7 +344,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
     };
 
     const allowedCategories = categoryMapping[heatingType] || [];
-    
+
     if (allowedCategories.length === 0) return [];
 
     // Normalizar strings para comparação (remover acentos e converter para minúsculas)
@@ -352,7 +358,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
     // Filtrar produtos que pertencem às categorias permitidas
     return residentialProducts.filter((product) => {
       const category2Normalized = normalizeString(product.category2 || "");
-      return allowedCategories.some((cat) => 
+      return allowedCategories.some((cat) =>
         category2Normalized === normalizeString(cat)
       );
     });
@@ -398,7 +404,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
     isShallow: boolean
   ) => {
     const tempDiff = desiredTemp - minTemp;
-    
+
     if (isShallow) {
       // Cálculo por área (profundidade <= 0.6m, cascatas, bordas infinitas)
       return (length * width * 0.06 * tempDiff * windFactor * tempFactor * suspendedFactor) / heatingTime;
@@ -454,7 +460,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
       const length = parseFloat(area.length) || 0;
       const width = parseFloat(area.width) || 0;
       const depth = parseFloat(area.depth) || 0;
-      
+
       if (length && width && depth) {
         const isShallow = depth <= 0.6;
         const capacity = calculateThermalCapacity(
@@ -513,7 +519,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
     // Consumo elétrico (simulado - em produção usar dados reais da máquina)
     const electricPower = 5; // kW simulado por máquina
     const totalPower = selectedMachines.reduce((sum, m) => sum + (electricPower * m.quantity), 0);
-    
+
     setEnergyConsumption({
       initial: newHeatingTime * totalPower,
       daily: totalPower * 8, // 8 horas por dia
@@ -529,7 +535,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
   };
 
   const updatePoolArea = (id: number, field: keyof PoolArea, value: string) => {
-    setPoolAreas(poolAreas.map(area => 
+    setPoolAreas(poolAreas.map(area =>
       area.id === id ? { ...area, [field]: value } : area
     ));
   };
@@ -617,15 +623,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
         return prev.filter(t => t !== type);
       } else {
         // Se marcar, adicionar o tipo
-        // Se for "Opção 04", também selecionar automaticamente "Opção 01"
-        if (type === "Opção 04") {
-          const newTypes = [...prev];
-          if (!newTypes.includes("Opção 01")) {
-            newTypes.push("Opção 01");
-          }
-          newTypes.push(type);
-          return newTypes;
-        }
+
         return [...prev, type];
       }
     });
@@ -636,13 +634,13 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
     setSelectedEquipments(prev => {
       const currentEquipments = prev[heatingType] || [];
       const newEquipments = { ...prev };
-      
+
       if (currentEquipments.includes(equipment)) {
         newEquipments[heatingType] = currentEquipments.filter(e => e !== equipment);
       } else {
         newEquipments[heatingType] = [...currentEquipments, equipment];
       }
-      
+
       return newEquipments;
     });
   };
@@ -651,23 +649,29 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
   const calculateGasHeaterPower = () => {
     // Recalcular vazão máxima simultânea
     const currentMaxFlow = calculateMaxSimultaneousFlow();
-    
+
     // V_simultaneo: Vazão máxima simultânea em litros/hora
     const maxSimultaneousFlowLitersPerHour = currentMaxFlow * 60; // Converter de L/min para L/h
-    
+
     // T_consumo: Temperatura de consumo
     const consumptionTempValue = parseFloat(consumptionTempCustom || consumptionTemp) || 40;
-    
+
     // T_ambiente_minima: Temperatura mínima local
     const cityKey = selectedCityResidential;
-    const minAmbientTemp = cityClimateData[cityKey] || 10; // Default 10°C se não encontrar
-    
+    const selectedCityData = cities.find(c => c.id === cityKey);
+    let minAmbientTemp = 10; // Default
+
+    if (selectedCityData && selectedCityData.monthlyData.length > 0) {
+      // Pega a menor temperatura registrada nos dados mensais
+      minAmbientTemp = Math.min(...selectedCityData.monthlyData.map(d => d.temperature));
+    }
+
     // eficiencia: Eficiência do equipamento = 0.85
     const efficiency = 0.85;
-    
+
     // Fórmula: E_total = V_simultaneo x (T_consumo - T_ambiente_minima) ÷ eficiencia
     const power = (maxSimultaneousFlowLitersPerHour * (consumptionTempValue - minAmbientTemp)) / efficiency;
-    
+
     setCalculatedPower(power);
     return power;
   };
@@ -676,7 +680,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
   const preselectGasHeater = (requiredPower: number) => {
     let bestHeater = mockGasHeaters[0];
     let minDiff = Math.abs(requiredPower - bestHeater.power);
-    
+
     for (const heater of mockGasHeaters) {
       const diff = Math.abs(requiredPower - heater.power);
       if (diff < minDiff) {
@@ -684,7 +688,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
         bestHeater = heater;
       }
     }
-    
+
     setSelectedGasHeater(bestHeater.id);
     setGasHeaterCustom("");
   };
@@ -696,20 +700,25 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
     const maxSimultaneousFlowLitersPerHour = currentMaxFlow * 60;
     const consumptionTempValue = parseFloat(consumptionTempCustom || consumptionTemp) || 40;
     const cityKey = selectedCityResidential;
-    const minAmbientTemp = cityClimateData[cityKey] || 10;
+    const selectedCityData = cities.find(c => c.id === cityKey);
+    let minAmbientTemp = 10; // Default
+
+    if (selectedCityData && selectedCityData.monthlyData.length > 0) {
+      minAmbientTemp = Math.min(...selectedCityData.monthlyData.map(d => d.temperature));
+    }
     const efficiency = 0.85;
-    
+
     // Potência total necessária
     const totalPower = (maxSimultaneousFlowLitersPerHour * (consumptionTempValue - minAmbientTemp)) / efficiency;
-    
+
     // 70% da demanda
     const demand70Percent = totalPower * 0.7;
-    
+
     // Área necessária (assumindo produção média de 600 kcal/h por m²)
     // Este valor pode ser ajustado conforme dados reais de produção solar
     const averageProductionPerM2 = 600; // kcal/h por m²
     const requiredArea = demand70Percent / averageProductionPerM2;
-    
+
     setCalculatedRequiredArea(requiredArea);
     return requiredArea;
   };
@@ -720,7 +729,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
       // Usar o coletor de área média como padrão
       const defaultCollector = mockSolarCollectors.find(c => c.area === 2.5) || mockSolarCollectors[1];
       setSelectedSolarCollector(defaultCollector.id);
-      
+
       // Calcular quantidade baseada na área necessária
       const quantity = Math.ceil(requiredArea / defaultCollector.area);
       setSolarCollectorQuantity(quantity.toString());
@@ -739,7 +748,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
     if (selectedHeatingTypes.includes("Opção 02")) {
       // Recalcular vazão máxima simultânea primeiro
       const currentMaxFlow = calculateMaxSimultaneousFlow();
-      
+
       if (currentMaxFlow > 0 && selectedCityResidential && (consumptionTempCustom || consumptionTemp)) {
         const power = calculateGasHeaterPower();
         if (power > 0 && !selectedGasHeater && !gasHeaterCustom) {
@@ -764,7 +773,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
   useEffect(() => {
     if (selectedHeatingTypes.includes("Opção 03")) {
       const currentMaxFlow = calculateMaxSimultaneousFlow();
-      
+
       if (currentMaxFlow > 0 && selectedCityResidential && (consumptionTempCustom || consumptionTemp)) {
         const requiredArea = calculateRequiredSolarArea();
         if (requiredArea > 0) {
@@ -795,6 +804,23 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
       }
     }
   }, [selectedSolarCollector, calculatedRequiredArea, selectedHeatingTypes]);
+
+  // Auto-seleção para Opção 01 (Elétrico)
+  useEffect(() => {
+    if (selectedHeatingTypes.includes("Opção 01")) {
+      const available = getEquipmentsByHeatingType("Opção 01");
+      if (available.length > 0) {
+        const ids = available.map(p => p.id);
+        setSelectedEquipments(prev => {
+          const current = prev["Opção 01"] || [];
+          if (JSON.stringify(current) !== JSON.stringify(ids)) {
+            return { ...prev, "Opção 01": ids };
+          }
+          return prev;
+        });
+      }
+    }
+  }, [selectedHeatingTypes, products]);
 
   const resetForm = () => {
     setSegment(null);
@@ -828,7 +854,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
     setInfinityLength("");
     setInfinityHeight("");
     setInfinityWidth("");
-    
+
     // Reset Residencial
     // Chuveiro 01
     setShower1Flow("");
@@ -929,7 +955,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
     if (proposal && open) {
       // Carregar dados básicos
       setSegment(proposal.segment);
-      
+
       // Cliente
       if (proposal.isNewClient) {
         setIsNewClient(true);
@@ -964,7 +990,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
         setEnclosedArea(data.enclosedArea || "");
         setIsSuspended(data.isSuspended || false);
         setPoolAreas(data.poolAreas || [{ id: 1, length: "", width: "", depth: "" }]);
-        
+
         // Serviços adicionais
         if (data.additionalServices) {
           setHasFiltrationSystem(data.additionalServices.filtrationSystem || false);
@@ -990,7 +1016,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
         // Dados residenciais
         setNeedsInstallation(data.needsInstallation ?? true);
         setNeedsProject(data.needsProject ?? true);
-        
+
         // Temperatura de consumo
         if (data.consumptionTemp) {
           setConsumptionTempCustom(data.consumptionTemp);
@@ -1112,12 +1138,12 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
 
       const proposalData = {
         segment: "piscina" as const,
-        client: isNewClient 
-          ? { 
-              isNew: true, 
-              name: newClientName, 
-              phone: newClientPhone 
-            }
+        client: isNewClient
+          ? {
+            isNew: true,
+            name: newClientName,
+            phone: newClientPhone
+          }
           : selectedClient ? { id: selectedClient } : undefined,
         city: selectedCity,
         data: {
@@ -1142,7 +1168,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
           infinityEdge: hasInfinityEdge ? { length: infinityLength, height: infinityHeight, width: infinityWidth } : null,
         },
       };
-      
+
       if (isEditMode && proposal) {
         updateProposalMutation.mutate({ id: proposal.id, data: proposalData });
       } else {
@@ -1161,12 +1187,12 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
       const maxFlow = calculateMaxSimultaneousFlow();
       const proposalData = {
         segment: "residencial" as const,
-        client: isNewClient 
-          ? { 
-              isNew: true, 
-              name: newClientName, 
-              phone: newClientPhone 
-            }
+        client: isNewClient
+          ? {
+            isNew: true,
+            name: newClientName,
+            phone: newClientPhone
+          }
           : selectedClient ? { id: selectedClient } : undefined,
         city: selectedCityResidential,
         data: {
@@ -1228,7 +1254,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
           } : null,
         },
       };
-      
+
       if (isEditMode && proposal) {
         updateProposalMutation.mutate({ id: proposal.id, data: proposalData });
       } else {
@@ -1241,9 +1267,9 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
   const renderContent = () => {
     // Seleção inicial de segmentação
     if (!segment) {
-  return (
+      return (
         <div className="grid grid-cols-2 gap-6 p-6">
-          <Card 
+          <Card
             className="cursor-pointer transition-all hover:scale-105 hover:shadow-lg border-2"
             onClick={() => setSegment("piscina")}
           >
@@ -1258,7 +1284,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
             </CardContent>
           </Card>
 
-          <Card 
+          <Card
             className="cursor-pointer transition-all hover:scale-105 hover:shadow-lg border-2"
             onClick={() => setSegment("residencial")}
           >
@@ -1295,8 +1321,8 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                     {isNewClient
                       ? newClientName || "Novo cliente..."
                       : selectedClient
-                      ? mockClients.find((client) => client.id === selectedClient)?.name
-                      : "Selecione o cliente..."}
+                        ? mockClients.find((client) => client.id === selectedClient)?.name
+                        : "Selecione o cliente..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -1348,7 +1374,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                   </Command>
                 </PopoverContent>
               </Popover>
-              
+
               {isNewClient && (
                 <div className="space-y-3 mt-4 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
                   <div className="space-y-2">
@@ -1372,7 +1398,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                 </div>
               )}
             </div>
-            </div>
+          </div>
 
           <Separator />
 
@@ -1390,15 +1416,15 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                   <SelectValue placeholder="Selecione a cidade" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockCities.map((city) => (
-                    <SelectItem key={`${city.city}-${city.state}`} value={`${city.city}-${city.state}`}>
-                      {city.city} - {city.state}
+                  {cities.map((city) => (
+                    <SelectItem key={city.id} value={city.id}>
+                      {city.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            </div>
+          </div>
 
           <Separator />
 
@@ -1438,22 +1464,22 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
             </div>
 
             <div className="space-y-4">
-            <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="frequency">Frequência de Uso *</Label>
                 <Select value={useFrequency} onValueChange={setUseFrequency}>
                   <SelectTrigger id="frequency">
                     <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
+                  </SelectTrigger>
+                  <SelectContent>
                     <SelectItem value="diario">Uso Diário</SelectItem>
                     <SelectItem value="esporadico">Uso Esporádico</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="temp">Temperatura Desejada (°C) *</Label>
-              <Input
+                <Input
                   id="temp"
                   type="number"
                   min="20"
@@ -1463,17 +1489,17 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                   value={desiredTemp}
                   onChange={(e) => setDesiredTemp(e.target.value)}
                 />
-                
+
                 {parseFloat(desiredTemp) > 31 && (
                   <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800">
                     <p className="text-xs font-semibold text-red-900 dark:text-red-100">
                       🔥 Temperatura elevada detectada ({desiredTemp}°C)
                     </p>
                     <p className="text-xs text-red-800 dark:text-red-200 mt-1">
-                      Fator de perda adicional será calculado: {((parseFloat(desiredTemp) - 31) * 0.15).toFixed(2)} 
+                      Fator de perda adicional será calculado: {((parseFloat(desiredTemp) - 31) * 0.15).toFixed(2)}
                       {' '}({parseFloat(desiredTemp) - 31} graus × 1,15)
-                      </p>
-                    </div>
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
@@ -1486,10 +1512,10 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold mb-2">4. Dimensões da Piscina</h3>
-                      <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Adicione as áreas da piscina
-                      </p>
-                    </div>
+                </p>
+              </div>
               <Button variant="outline" size="sm" onClick={addPoolArea}>
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar Área
@@ -1500,42 +1526,41 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
               {poolAreas.map((area, index) => {
                 const depth = parseFloat(area.depth);
                 const isShallow = depth > 0 && depth <= 0.6;
-                
+
                 return (
                   <div key={area.id} className="p-4 rounded-lg border space-y-4">
                     <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                         <h4 className="font-semibold">Área {index + 1}</h4>
                         {depth > 0 && (
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            isShallow 
-                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' 
-                              : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300'
-                          }`}>
+                          <span className={`text-xs px-2 py-1 rounded-full ${isShallow
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                            : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300'
+                            }`}>
                             {isShallow ? 'Área Rasa (≤ 0,6m)' : 'Área Profunda (> 0,6m)'}
                           </span>
                         )}
                       </div>
                       {poolAreas.length > 1 && (
-                    <Button
-                      variant="ghost"
+                        <Button
+                          variant="ghost"
                           size="sm"
                           onClick={() => removePoolArea(area.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       )}
-                  </div>
+                    </div>
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>Comprimento (m)</Label>
-                      <Input
-                        type="number"
+                        <Input
+                          type="number"
                           step="0.01"
                           value={area.length}
                           onChange={(e) => updatePoolArea(area.id, "length", e.target.value)}
-                      />
-                    </div>
+                        />
+                      </div>
                       <div className="space-y-2">
                         <Label>Largura (m)</Label>
                         <Input
@@ -1544,7 +1569,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                           value={area.width}
                           onChange={(e) => updatePoolArea(area.id, "width", e.target.value)}
                         />
-                    </div>
+                      </div>
                       <div className="space-y-2">
                         <Label>Profundidade (m)</Label>
                         <Input
@@ -1669,8 +1694,8 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                       Cálculo específico de carga térmica será aplicado à área da cascata
                     </p>
                   </>
-            )}
-          </div>
+                )}
+              </div>
 
               <div className="space-y-4 p-4 rounded-lg border bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950">
                 <div className="flex items-center space-x-2">
@@ -1687,11 +1712,11 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                 {hasInfinityEdge && (
                   <>
                     <div className="grid grid-cols-3 gap-4 ml-6">
-            <div className="space-y-2">
+                      <div className="space-y-2">
                         <Label>Comprimento (m) *</Label>
-              <Input
-                type="number"
-                step="0.01"
+                        <Input
+                          type="number"
+                          step="0.01"
                           placeholder="Ex: 10"
                           value={infinityLength}
                           onChange={(e) => setInfinityLength(e.target.value)}
@@ -1834,7 +1859,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
               <Label>Cliente:</Label>
               <Popover open={clientOpen} onOpenChange={setClientOpen}>
                 <PopoverTrigger asChild>
-                    <Button
+                  <Button
                     variant="outline"
                     role="combobox"
                     aria-expanded={clientOpen}
@@ -1843,10 +1868,10 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                     {isNewClient
                       ? newClientName || "Novo cliente..."
                       : selectedClient
-                      ? mockClients.find((client) => client.id === selectedClient)?.name
-                      : "Selecione o cliente..."}
+                        ? mockClients.find((client) => client.id === selectedClient)?.name
+                        : "Selecione o cliente..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
+                  </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-full p-0">
                   <Command>
@@ -1865,7 +1890,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                           <div className="flex items-center gap-2">
                             <span className="text-lg">➕</span>
                             <span className="font-semibold">Cadastrar novo cliente</span>
-                  </div>
+                          </div>
                         </CommandItem>
                         {mockClients.map((client) => (
                           <CommandItem
@@ -1896,7 +1921,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                   </Command>
                 </PopoverContent>
               </Popover>
-              
+
               {isNewClient && (
                 <div className="space-y-3 mt-4 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
                   <div className="space-y-2">
@@ -1917,8 +1942,8 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                       onChange={(e) => setNewClientPhone(e.target.value)}
                     />
                   </div>
-              </div>
-            )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1938,15 +1963,15 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                   <SelectValue placeholder="Selecione a cidade" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockCities.map((city) => (
-                    <SelectItem key={`${city.city}-${city.state}`} value={`${city.city}-${city.state}`}>
-                      {city.city} - {city.state}
+                  {cities.map((city) => (
+                    <SelectItem key={city.id} value={city.id}>
+                      {city.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            </div>
+          </div>
 
           <Separator />
 
@@ -1956,8 +1981,8 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
               <h3 className="text-lg font-semibold mb-2">1. Banheiros</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Configure um vazão e tempo de utilização dos equipamentos banheiro
-                      </p>
-                    </div>
+              </p>
+            </div>
 
             {/* Chuveiro 01 */}
             <div className="space-y-4 p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950">
@@ -2099,8 +2124,8 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                     }}
                   />
                 </div>
+              </div>
             </div>
-          </div>
 
             {/* Banheira */}
             <div className="space-y-4 p-4 rounded-lg border-2 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
@@ -2134,8 +2159,8 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                     }}
                   />
                 </div>
+              </div>
             </div>
-          </div>
           </div>
 
           <Separator />
@@ -2146,8 +2171,8 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
               <h3 className="text-lg font-semibold mb-2">2. Cozinha</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Configure a vazão e tempo de utilização das torneiras da cozinha
-                      </p>
-                    </div>
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="kitchen-flow">Vazão das Torneiras (L/min) *</Label>
@@ -2224,28 +2249,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
 
           <Separator />
 
-          {/* Seleção de Temperatura de Consumo */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Seleção Temperatura de Consumo</h3>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="consumption-temp-res">Temperatura de Consumo (°C) *</Label>
-              <Input
-                id="consumption-temp-res"
-                type="number"
-                step="0.1"
-                placeholder="Digite a temperatura de consumo"
-                value={consumptionTempCustom || consumptionTemp}
-                onChange={(e) => {
-                  setConsumptionTempCustom(e.target.value);
-                  setConsumptionTemp("");
-                }}
-              />
-            </div>
-          </div>
 
-          <Separator />
 
           {/* Seção 4: Seleção de Tipos de Sistemas de Aquecimento */}
           <div className="space-y-4">
@@ -2255,7 +2259,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                 Selecione um ou mais tipos de sistemas de aquecimento (é possível marcar mais de uma opção)
               </p>
             </div>
-            
+
             <div className="space-y-3">
               {/* Opção 01 - Elétrico c/ resistência */}
               <div className="p-4 rounded-lg border-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
@@ -2270,52 +2274,24 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                   </Label>
                 </div>
                 {selectedHeatingTypes.includes("Opção 01") && (
-                  <div className="ml-6 mt-4 space-y-3">
-                    <Label className="text-sm font-medium">Selecione os equipamentos:</Label>
-                    {isLoadingProducts ? (
-                      <div className="p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-                        <p className="text-xs text-muted-foreground">Carregando equipamentos...</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2 p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-                        {getEquipmentsByHeatingType("Opção 01").length === 0 ? (
-                          <p className="text-xs text-muted-foreground">
-                            Nenhum equipamento disponível. Cadastre produtos na categoria "Equipamentos" para este tipo de sistema.
-                          </p>
-                        ) : (
-                          <div className="space-y-2">
-                            {getEquipmentsByHeatingType("Opção 01").map((equipment) => {
-                              const isSelected = selectedEquipments["Opção 01"]?.includes(equipment.id) || false;
-                              return (
-                                <div
-                                  key={equipment.id}
-                                  className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800"
-                                >
-                                  <Checkbox
-                                    id={`equipment-01-${equipment.id}`}
-                                    checked={isSelected}
-                                    onCheckedChange={() => toggleEquipment("Opção 01", equipment.id)}
-                                  />
-                                  <Label
-                                    htmlFor={`equipment-01-${equipment.id}`}
-                                    className="cursor-pointer flex-1"
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{equipment.description}</span>
-                                      {equipment.code && (
-                                        <span className="text-xs text-muted-foreground">
-                                          Código: {equipment.code}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </Label>
-                                </div>
-                              );
-                            })}
+                  <div className="space-y-2 max-w-full">
+                    {/* Auto-seleção para Opção 01 */}
+                    <div className="space-y-2 p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+                      <p className="text-sm font-medium mb-2">Equipamentos definidos pelo sistema:</p>
+                      {getEquipmentsByHeatingType("Opção 01").map((equipment) => {
+                        const isSelected = selectedEquipments["Opção 01"]?.includes(equipment.id) || false;
+                        if (!isSelected) return null;
+                        return (
+                          <div key={equipment.id} className="flex items-center space-x-2 p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                            <Check className="h-4 w-4 text-green-500" />
+                            <span className="text-sm">{equipment.description}</span>
                           </div>
-                        )}
-                      </div>
-                    )}
+                        );
+                      })}
+                      {(!selectedEquipments["Opção 01"] || selectedEquipments["Opção 01"].length === 0) && (
+                        <p className="text-xs text-muted-foreground">Nenhum equipamento compatível encontrado.</p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -2346,9 +2322,9 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                         <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
                           <p className="font-medium">Fórmula: E_total = V_simultâneo × (T_consumo - T_ambiente_mínima) ÷ eficiência</p>
                           <p>
-                            V_simultâneo: {(maxSimultaneousFlow * 60).toFixed(2)} L/h | 
-                            T_consumo: {parseFloat(consumptionTempCustom || consumptionTemp) || 40}°C | 
-                            T_ambiente_mínima: {cityClimateData[selectedCityResidential] || 10}°C | 
+                            V_simultâneo: {(maxSimultaneousFlow * 60).toFixed(2)} L/h |
+                            T_consumo: {parseFloat(consumptionTempCustom || consumptionTemp) || 40}°C |
+                            T_ambiente_mínima: {cityClimateData[selectedCityResidential] || 10}°C |
                             Eficiência: 0.85
                           </p>
                         </div>
@@ -2358,103 +2334,25 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                     {/* Seleção do Modelo de Aquecedor a Gás */}
                     <div className="space-y-3">
                       <Label className="text-sm font-medium">Selecione o modelo do aquecedor a gás:</Label>
-                      
-                      <Popover open={gasHeaterOpen} onOpenChange={setGasHeaterOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={gasHeaterOpen}
-                            className="w-full justify-between"
-                          >
-                            {gasHeaterCustom
-                              ? gasHeaterCustom
-                              : selectedGasHeater
-                              ? mockGasHeaters.find((heater) => heater.id === selectedGasHeater)?.model
-                              : "Selecione ou digite o modelo..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
-                          <Command>
-                            <CommandInput placeholder="Buscar aquecedor ou digite..." />
-                            <CommandList>
-                              <CommandEmpty>
-                                <div className="p-2">
-                                  <p className="text-sm mb-2">Nenhum aquecedor encontrado.</p>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full"
-                                    onClick={() => {
-                                      setGasHeaterCustom("");
-                                      setSelectedGasHeater("");
-                                      setGasHeaterOpen(false);
-                                    }}
-                                  >
-                                    Digitar modelo manualmente
-                                  </Button>
-                                </div>
-                              </CommandEmpty>
-                              <CommandGroup>
-                                <CommandItem
-                                  value="novo-produto"
-                                  onSelect={() => {
-                                    // TODO: Abrir modal de cadastro de produto (apenas para admin)
-                                    console.log("Abrir modal de cadastro de novo produto");
-                                    setGasHeaterOpen(false);
-                                  }}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <Plus className="h-4 w-4" />
-                                    <span className="font-semibold">Cadastrar novo produto</span>
-                                  </div>
-                                </CommandItem>
-                                {mockGasHeaters.map((heater) => (
-                                  <CommandItem
-                                    key={heater.id}
-                                    value={`${heater.model} ${heater.power} kcal/h`}
-                                    onSelect={() => {
-                                      setSelectedGasHeater(heater.id === selectedGasHeater ? "" : heater.id);
-                                      setGasHeaterCustom("");
-                                      setGasHeaterOpen(false);
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        selectedGasHeater === heater.id ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{heater.model}</span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {heater.power.toLocaleString()} kcal/h
-                                      </span>
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
 
-                      {/* Opção para digitar manualmente */}
-                      {!selectedGasHeater && (
-                        <div className="space-y-2">
-                          <Label htmlFor="gas-heater-custom">Ou digite o modelo:</Label>
-                          <Input
-                            id="gas-heater-custom"
-                            placeholder="Digite o modelo do aquecedor"
-                            value={gasHeaterCustom}
-                            onChange={(e) => {
-                              setGasHeaterCustom(e.target.value);
-                              setSelectedGasHeater("");
-                            }}
-                          />
+                      {/* Visualização do Modelo Selecionado (Automático) */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Modelo dimensionado:</Label>
+                        <div className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg flex items-center justify-between">
+                          <span className="font-bold text-lg">
+                            {selectedGasHeater
+                              ? mockGasHeaters.find(h => h.id === selectedGasHeater)?.model
+                              : "Calculando..."}
+                          </span>
+                          {selectedGasHeater && (
+                            <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full font-medium">
+                              Recomendado
+                            </span>
+                          )}
                         </div>
-                      )}
+                      </div>
+
+
 
                       {/* Quantidade */}
                       <div className="space-y-2">
@@ -2517,108 +2415,26 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                     {/* Seleção do Modelo do Coletor Solar */}
                     <div className="space-y-3">
                       <Label className="text-sm font-medium">Selecione o modelo do coletor solar:</Label>
-                      
-                      <Popover open={solarCollectorOpen} onOpenChange={setSolarCollectorOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={solarCollectorOpen}
-                            className="w-full justify-between"
-                          >
-                            {solarCollectorCustom
-                              ? solarCollectorCustom
-                              : selectedSolarCollector
-                              ? mockSolarCollectors.find((collector) => collector.id === selectedSolarCollector)?.model
-                              : "Selecione ou digite o modelo..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
-                          <Command>
-                            <CommandInput placeholder="Buscar coletor ou digite..." />
-                            <CommandList>
-                              <CommandEmpty>
-                                <div className="p-2">
-                                  <p className="text-sm mb-2">Nenhum coletor encontrado.</p>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full"
-                                    onClick={() => {
-                                      setSolarCollectorCustom("");
-                                      setSelectedSolarCollector("");
-                                      setSolarCollectorOpen(false);
-                                    }}
-                                  >
-                                    Digitar modelo manualmente
-                                  </Button>
-                                </div>
-                              </CommandEmpty>
-                              <CommandGroup>
-                                <CommandItem
-                                  value="novo-produto-solar"
-                                  onSelect={() => {
-                                    // TODO: Abrir modal de cadastro de produto (apenas para admin)
-                                    console.log("Abrir modal de cadastro de novo produto solar");
-                                    setSolarCollectorOpen(false);
-                                  }}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <Plus className="h-4 w-4" />
-                                    <span className="font-semibold">Cadastrar novo produto</span>
-                                  </div>
-                                </CommandItem>
-                                {mockSolarCollectors.map((collector) => (
-                                  <CommandItem
-                                    key={collector.id}
-                                    value={`${collector.model} ${collector.area} m²`}
-                                    onSelect={() => {
-                                      setSelectedSolarCollector(collector.id === selectedSolarCollector ? "" : collector.id);
-                                      setSolarCollectorCustom("");
-                                      setSolarCollectorOpen(false);
-                                      // Recalcular quantidade se área necessária já foi calculada
-                                      if (calculatedRequiredArea && calculatedRequiredArea > 0) {
-                                        const quantity = Math.ceil(calculatedRequiredArea / collector.area);
-                                        setSolarCollectorQuantity(quantity.toString());
-                                      }
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        selectedSolarCollector === collector.id ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{collector.model}</span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {collector.area} m² {collector.production ? `| ${collector.production} kcal/h` : ""}
-                                      </span>
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+
+                      {/* Visualização do Modelo Selecionado (Automático) */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Modelo dimensionado:</Label>
+                        <div className="p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg flex items-center justify-between">
+                          <span className="font-bold text-lg">
+                            {selectedSolarCollector
+                              ? mockSolarCollectors.find(h => h.id === selectedSolarCollector)?.model
+                              : "Calculando..."}
+                          </span>
+                          {selectedSolarCollector && (
+                            <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full font-medium">
+                              Recomendado
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
                       {/* Opção para digitar manualmente */}
-                      {!selectedSolarCollector && (
-                        <div className="space-y-2">
-                          <Label htmlFor="solar-collector-custom">Ou digite o modelo:</Label>
-                          <Input
-                            id="solar-collector-custom"
-                            placeholder="Digite o modelo do coletor"
-                            value={solarCollectorCustom}
-                            onChange={(e) => {
-                              setSolarCollectorCustom(e.target.value);
-                              setSelectedSolarCollector("");
-                            }}
-                          />
-                        </div>
-                      )}
+
 
                       {/* Quantidade */}
                       <div className="space-y-2">
@@ -2671,75 +2487,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                 )}
               </div>
 
-              {/* Opção 04 - (seleciona automaticamente Opção 01) */}
-              <div className="p-4 rounded-lg border-2 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
-                <div className="flex items-center space-x-2 mb-3">
-                  <Checkbox
-                    id="heating-type-04"
-                    checked={selectedHeatingTypes.includes("Opção 04")}
-                    onCheckedChange={() => toggleHeatingType("Opção 04")}
-                  />
-                  <Label htmlFor="heating-type-04" className="cursor-pointer font-semibold">
-                    Opção 04
-                  </Label>
-                </div>
-                {selectedHeatingTypes.includes("Opção 04") && (
-                  <div className="ml-6 mt-2">
-                    <p className="text-xs text-muted-foreground italic">
-                      * Ao selecionar a opção 04, a opção 01 é selecionada automaticamente
-                    </p>
-                  </div>
-                )}
-                {selectedHeatingTypes.includes("Opção 04") && (
-                  <div className="ml-6 mt-4 space-y-3">
-                    <Label className="text-sm font-medium">Selecione os equipamentos:</Label>
-                    {isLoadingProducts ? (
-                      <div className="p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-                        <p className="text-xs text-muted-foreground">Carregando equipamentos...</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2 p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-                        {getEquipmentsByHeatingType("Opção 04").length === 0 ? (
-                          <p className="text-xs text-muted-foreground">
-                            Nenhum equipamento disponível. Cadastre produtos na categoria "Equipamentos" para este tipo de sistema.
-                          </p>
-                        ) : (
-                          <div className="space-y-2">
-                            {getEquipmentsByHeatingType("Opção 04").map((equipment) => {
-                              const isSelected = selectedEquipments["Opção 04"]?.includes(equipment.id) || false;
-                              return (
-                                <div
-                                  key={equipment.id}
-                                  className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800"
-                                >
-                                  <Checkbox
-                                    id={`equipment-04-${equipment.id}`}
-                                    checked={isSelected}
-                                    onCheckedChange={() => toggleEquipment("Opção 04", equipment.id)}
-                                  />
-                                  <Label
-                                    htmlFor={`equipment-04-${equipment.id}`}
-                                    className="cursor-pointer flex-1"
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{equipment.description}</span>
-                                      {equipment.code && (
-                                        <span className="text-xs text-muted-foreground">
-                                          Código: {equipment.code}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </Label>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+
             </div>
           </div>
 
@@ -2786,7 +2534,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                   <Label htmlFor="network-circulation" className="cursor-pointer font-semibold">
                     🔄 Sistema de Circulação de Rede
                   </Label>
-          </div>
+                </div>
                 {hasNetworkCirculation && (
                   <div className="ml-6 space-y-2">
                     <Label htmlFor="network-circulation-qty">Quantidade *</Label>
@@ -2801,7 +2549,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
                     />
                   </div>
                 )}
-        </div>
+              </div>
 
               {/* Sistema de Pressurização */}
               <div className="flex items-center space-x-2 p-4 rounded-lg border-2 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950">
@@ -2828,7 +2576,7 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
               </div>
             </div>
           </div>
-        </div>
+        </div >
       );
     }
   };
@@ -2843,17 +2591,17 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isEditMode 
+            {isEditMode
               ? `Editar Proposta - ${proposal?.segment === "piscina" ? "Piscina" : "Residencial"}`
-              : !segment ? "Nova Proposta - Selecione a Segmentação" : 
-             segment === "piscina" ? "Proposta Piscina" :
-             "Proposta residencial"}
+              : !segment ? "Nova Proposta - Selecione a Segmentação" :
+                segment === "piscina" ? "Proposta Piscina" :
+                  "Proposta residencial"}
           </DialogTitle>
           {segment !== "residencial" && (
             <DialogDescription>
               {!segment ? "Escolha o tipo de proposta que deseja criar" :
-               segment === "piscina" ? "" :
-               ""}
+                segment === "piscina" ? "" :
+                  ""}
             </DialogDescription>
           )}
         </DialogHeader>
@@ -2869,23 +2617,23 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
           </Button>
 
           {segment === "piscina" && (
-            <Button 
+            <Button
               onClick={handleSubmit}
               disabled={createProposalMutation.isPending || updateProposalMutation.isPending}
             >
-              {createProposalMutation.isPending || updateProposalMutation.isPending 
-                ? (isEditMode ? "Salvando..." : "Criando...") 
+              {createProposalMutation.isPending || updateProposalMutation.isPending
+                ? (isEditMode ? "Salvando..." : "Criando...")
                 : (isEditMode ? "Salvar Alterações" : "Criar Proposta")}
-          </Button>
+            </Button>
           )}
 
           {segment === "residencial" && (
-            <Button 
+            <Button
               onClick={handleSubmit}
               disabled={createProposalMutation.isPending || updateProposalMutation.isPending}
             >
-              {createProposalMutation.isPending || updateProposalMutation.isPending 
-                ? (isEditMode ? "Salvando..." : "Criando...") 
+              {createProposalMutation.isPending || updateProposalMutation.isPending
+                ? (isEditMode ? "Salvando..." : "Criando...")
                 : (isEditMode ? "Salvar Alterações" : "Criar Proposta")}
             </Button>
           )}
@@ -2894,4 +2642,3 @@ export function ProposalFormModal({ open, onOpenChange, proposal }: ProposalForm
     </Dialog>
   );
 }
-                                          
