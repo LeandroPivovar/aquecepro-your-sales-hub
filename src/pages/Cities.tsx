@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, ChevronRight, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, ChevronRight, Loader2, Upload } from "lucide-react";
 import { CityFormModal } from "@/components/modals/CityFormModal";
 import {
   Collapsible,
@@ -35,6 +35,32 @@ export default function Cities() {
   const { data: cities = [], isLoading, error } = useQuery<City[]>({
     queryKey: ['cities'],
     queryFn: () => api.getCities(),
+  });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const importMutation = useMutation({
+    mutationFn: (file: File) => api.importCities(file),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['cities'] });
+      toast({
+        title: 'Importação Concluída',
+        description: data.message,
+      });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro na Importação',
+        description: error.message,
+        variant: 'destructive',
+      });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
   });
 
   const deleteMutation = useMutation({
@@ -73,6 +99,13 @@ export default function Cities() {
   const handleDelete = (id: string) => {
     if (confirm('Tem certeza que deseja remover esta cidade?')) {
       deleteMutation.mutate(id);
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      importMutation.mutate(file);
     }
   };
 
@@ -123,10 +156,32 @@ export default function Cities() {
           <h1 className="text-3xl font-bold text-foreground">Cidades</h1>
           <p className="text-muted-foreground">Gerencie as cidades e seus dados climáticos mensais</p>
         </div>
-        <Button className="gap-2" onClick={() => handleOpenModal()}>
-          <Plus className="h-4 w-4" />
-          Nova Cidade
-        </Button>
+        <div className="flex gap-2">
+          <input
+            type="file"
+            accept=".xlsx, .xls"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+          />
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importMutation.isPending}
+          >
+            {importMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
+            Importar Planilha
+          </Button>
+          <Button className="gap-2" onClick={() => handleOpenModal()}>
+            <Plus className="h-4 w-4" />
+            Nova Cidade
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-2">

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { api, CreateProductRequest } from "@/lib/api";
+import { api, CreateProductRequest, Category } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import {
@@ -29,32 +29,8 @@ interface ProductFormModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const mockSegments = ["piscina", "residencia"];
-
-const categoriesBySegment: Record<string, string[]> = {
-  residencia: ["Equipamentos", "Serviços"],
-  piscina: ["Aquecedores Solares", "Aquecedores a Gás", "Bombas de Calor", "Acessórios"],
-};
-
-const categories2ByCategory1: Record<string, string[]> = {
-  Equipamentos: [
-    "Aquecedor a gás",
-    "Bombas de circulacao",
-    "Bomba de Calor",
-    "Coletor solar",
-    "Controlador digital",
-    "Kit pressurizacao indireto",
-    "Motobombas",
-    "Pressurizador",
-    "Reservatório",
-  ],
-  Serviços: ["Execução"],
-};
-
-// Categorias 2 padrão para Comercial (mantém as originais)
-const defaultCategories2 = ["Baixa Pressão", "Alta Pressão", "Compacto", "Acumulação"];
-
 // Campos de características por Categoria 2 (chave normalizada)
+// Obs: mantido fixo para as abas técnicas até que isso se torne dinâmico no DB
 const categories2Fields: Record<string, string[]> = {
   "bomba de calor": [
     "thermalCapacity26",
@@ -108,27 +84,36 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
   const [cost, setCost] = useState("");
   const [saleValue, setSaleValue] = useState("");
 
-  // Obter categorias 1 baseadas no segmento selecionado
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: () => api.getCategories(),
+  });
+
   const getCategories1 = () => {
     if (!segment) return [];
-    return categoriesBySegment[segment] || [];
+    return categories
+      .filter((c) => c.type === 'categoria 1' && c.segment === segment)
+      .map((c) => c.name);
   };
 
-  // Obter categorias 2 baseadas na categoria 1 selecionada
   const getCategories2 = () => {
     if (!category1) return [];
-    if (categories2ByCategory1[category1]) {
-      return categories2ByCategory1[category1].sort(); // Ordenar alfabeticamente
-    }
-    // Para categorias do segmento Comercial, usar as categorias padrão
-    return defaultCategories2;
+    const selectedCategory1Obj = categories.find(
+      (c) => c.name === category1 && c.type === 'categoria 1' && c.segment === segment
+    );
+    if (!selectedCategory1Obj) return [];
+
+    return categories
+      .filter((c) => c.type === 'categoria 2' && c.parentId === selectedCategory1Obj.id)
+      .map((c) => c.name)
+      .sort();
   };
 
   // Limpar categoria1 quando o segmento mudar
   const handleSegmentChange = (newSegment: string) => {
     setSegment(newSegment);
-    setCategory1(""); // Limpar categoria1 quando segmento mudar
-    setCategory2(""); // Limpar categoria2 também
+    setCategory1("");
+    setCategory2("");
   };
 
   // Limpar categoria2 quando categoria1 mudar
@@ -263,7 +248,7 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
       code,
       description,
       proposalDescription,
-      segment: segment as 'piscina' | 'residencia',
+      segment: segment,
       category1,
       category2,
       technicalSpecs: Object.keys(technicalSpecs).length > 0 ? technicalSpecs : undefined,
@@ -297,11 +282,8 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockSegments.map((seg) => (
-                      <SelectItem key={seg} value={seg}>
-                        {seg}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="Residencial">Residencial</SelectItem>
+                    <SelectItem value="Piscina">Piscina</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

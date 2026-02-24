@@ -37,7 +37,9 @@ export default function Categories() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [name, setName] = useState("");
-  const [segment, setSegment] = useState<"Residencial" | "Comercial">("Residencial");
+  const [type, setType] = useState<"categoria 1" | "categoria 2">("categoria 1");
+  const [segment, setSegment] = useState<string>("Residencial");
+  const [parentId, setParentId] = useState<string>("none");
   const [description, setDescription] = useState("");
   const queryClient = useQueryClient();
 
@@ -107,7 +109,9 @@ export default function Categories() {
 
   const resetForm = () => {
     setName("");
+    setType("categoria 1");
     setSegment("Residencial");
+    setParentId("none");
     setDescription("");
     setEditingCategory(null);
   };
@@ -116,7 +120,9 @@ export default function Categories() {
     if (category) {
       setEditingCategory(category);
       setName(category.name);
+      setType(category.type || "categoria 1");
       setSegment(category.segment);
+      setParentId(category.parentId || "none");
       setDescription(category.description || "");
     } else {
       resetForm();
@@ -139,9 +145,20 @@ export default function Categories() {
       return;
     }
 
+    if (type === "categoria 2" && parentId === "none") {
+      toast({
+        title: 'Erro na validação',
+        description: 'É necessário selecionar uma Categoria 1 pai.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const categoryData: CreateCategoryRequest = {
       name: name.trim(),
-      segment,
+      type: type,
+      segment: segment,
+      parentId: type === "categoria 2" ? (parentId !== "none" ? parentId : undefined) : undefined,
       description: description.trim() || undefined,
     };
 
@@ -216,6 +233,7 @@ export default function Categories() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>Tipo</TableHead>
               <TableHead>Segmentação</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Produtos</TableHead>
@@ -233,6 +251,16 @@ export default function Categories() {
               categories.map((category) => (
                 <TableRow key={category.id}>
                   <TableCell className="font-medium">{category.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="capitalize">
+                      {category.type}
+                    </Badge>
+                    {category.parentName && (
+                      <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                        ↳ {category.parentName}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="bg-info/20 text-info border-info/30">
                       {category.segment}
@@ -299,22 +327,70 @@ export default function Categories() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="cat-segment">Segmento *</Label>
-              <Select
-                value={segment}
-                onValueChange={(value) => setSegment(value as "Residencial" | "Comercial")}
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
-                <SelectTrigger id="cat-segment">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Residencial">Residencial</SelectItem>
-                  <SelectItem value="Comercial">Comercial</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cat-segment">Segmento *</Label>
+                <Select
+                  value={segment}
+                  onValueChange={(value) => {
+                    setSegment(value);
+                    setParentId("none"); // reset parent when segment changes
+                  }}
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                >
+                  <SelectTrigger id="cat-segment">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Residencial">Residencial</SelectItem>
+                    <SelectItem value="Comercial">Comercial</SelectItem>
+                    <SelectItem value="Piscina">Piscina</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cat-type">Nível da Categoria *</Label>
+                <Select
+                  value={type}
+                  onValueChange={(value) => setType(value as "categoria 1" | "categoria 2")}
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                >
+                  <SelectTrigger id="cat-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="categoria 1">Categoria 1</SelectItem>
+                    <SelectItem value="categoria 2">Categoria 2</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
+            {type === "categoria 2" && (
+              <div className="space-y-2">
+                <Label htmlFor="cat-parent">Categoria 1 (Pai) *</Label>
+                <Select
+                  value={parentId}
+                  onValueChange={(value) => setParentId(value)}
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                >
+                  <SelectTrigger id="cat-parent">
+                    <SelectValue placeholder="Selecione a Categoria 1" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" disabled>Selecione...</SelectItem>
+                    {categories
+                      .filter((c) => c.type === "categoria 1" && c.segment === segment)
+                      .map((parentCat) => (
+                        <SelectItem key={parentCat.id} value={parentCat.id}>
+                          {parentCat.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="cat-description">Descrição</Label>

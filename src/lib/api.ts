@@ -48,7 +48,7 @@ export interface Product {
   code: string;
   description: string;
   proposalDescription: string;
-  segment: 'piscina' | 'residencia';
+  segment: string;
   category1: string;
   category2: string;
   technicalSpecs?: Record<string, any>;
@@ -63,7 +63,7 @@ export interface CreateProductRequest {
   code: string;
   description: string;
   proposalDescription: string;
-  segment: 'piscina' | 'residencia';
+  segment: string;
   category1: string;
   category2: string;
   technicalSpecs?: Record<string, any>;
@@ -75,7 +75,10 @@ export interface CreateProductRequest {
 export interface Category {
   id: string;
   name: string;
-  segment: 'piscina' | 'residencia';
+  type: 'categoria 1' | 'categoria 2';
+  segment: string;
+  parentId?: string;
+  parentName?: string;
   description?: string;
   status: 'active' | 'inactive';
   createdAt: string;
@@ -85,7 +88,9 @@ export interface Category {
 
 export interface CreateCategoryRequest {
   name: string;
-  segment: 'piscina' | 'residencia';
+  type?: 'categoria 1' | 'categoria 2';
+  segment: string;
+  parentId?: string;
   description?: string;
   status?: 'active' | 'inactive';
 }
@@ -290,10 +295,13 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const token = this.getToken();
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
+    const headers: Record<string, string> = {
+      ...options.headers as Record<string, string>,
     };
+
+    if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+    }
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -385,6 +393,17 @@ class ApiService {
     await this.request(`/products/${id}`, {
       method: 'DELETE',
     });
+  }
+
+  async importProducts(file: File): Promise<{ message: string, importedCount: number }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await this.request<{ message: string, importedCount: number }>('/products/import', {
+      method: 'POST',
+      body: formData,
+    });
+    return response;
   }
 
   // Categories
@@ -489,6 +508,17 @@ class ApiService {
     });
   }
 
+  async importCities(file: File): Promise<{ message: string, importedCount: number }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await this.request<{ message: string, importedCount: number }>('/cities/import', {
+      method: 'POST',
+      body: formData,
+    });
+    return response;
+  }
+
   // Users
   async getUsers(): Promise<User[]> {
     const response = await this.request<{ data: User[] } | User[]>('/users');
@@ -566,7 +596,7 @@ class ApiService {
 
   async getProposal(id: string): Promise<Proposal> {
     const response = await this.request<{ data: Proposal } | Proposal>(`/proposals/${id}`);
-    return 'data' in response ? response.data : response;
+    return ('segment' in response) ? response : (response as { data: Proposal }).data;
   }
 
   async createProposal(data: CreateProposalRequest): Promise<Proposal> {
@@ -574,7 +604,7 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    return 'data' in response ? response.data : response;
+    return ('segment' in response) ? response : (response as { data: Proposal }).data;
   }
 
   async updateProposal(id: string, data: Partial<UpdateProposalRequest>): Promise<Proposal> {
@@ -582,7 +612,7 @@ class ApiService {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
-    return 'data' in response ? response.data : response;
+    return ('segment' in response) ? response : (response as { data: Proposal }).data;
   }
 
   async deleteProposal(id: string): Promise<void> {
@@ -595,14 +625,14 @@ class ApiService {
     const response = await this.request<{ data: Proposal } | Proposal>(`/proposals/${id}/close`, {
       method: 'PATCH',
     });
-    return 'data' in response ? response.data : response;
+    return ('segment' in response) ? response : (response as { data: Proposal }).data;
   }
 
   async cancelProposal(id: string): Promise<Proposal> {
     const response = await this.request<{ data: Proposal } | Proposal>(`/proposals/${id}/cancel`, {
       method: 'PATCH',
     });
-    return 'data' in response ? response.data : response;
+    return ('segment' in response) ? response : (response as { data: Proposal }).data;
   }
 
   // Dashboard
