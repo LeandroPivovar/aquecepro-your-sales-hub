@@ -22,16 +22,16 @@ export async function generateProposalPDF({ proposal }: PDFOptions): Promise<voi
     // Tentar carregar o logo usando import dinâmico
     const logoModule = await import('@/assets/aquecepro-logo.png');
     const logoUrl = logoModule.default;
-    
+
     if (logoUrl && typeof logoUrl === 'string') {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      
+
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(() => {
           resolve();
         }, 2000); // Timeout de 2 segundos
-        
+
         img.onload = () => {
           try {
             const logoWidth = 80;
@@ -58,7 +58,7 @@ export async function generateProposalPDF({ proposal }: PDFOptions): Promise<voi
     console.warn('Erro ao carregar logo:', error);
     // Continuar sem o logo se houver erro
   }
-  
+
   // Ajustar posição se o logo não foi adicionado
   if (!logoAdded) {
     yPosition = 30;
@@ -95,7 +95,7 @@ export async function generateProposalPDF({ proposal }: PDFOptions): Promise<voi
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'normal');
-  
+
   const clientInfo = [
     ['Nome:', proposal.clientName || proposal.clientId || 'Não informado'],
     ['Telefone:', proposal.clientPhone || 'Não informado'],
@@ -124,7 +124,7 @@ export async function generateProposalPDF({ proposal }: PDFOptions): Promise<voi
   const footerY = pageHeight - 20;
   doc.setDrawColor(200, 200, 200);
   doc.line(20, footerY - 10, pageWidth - 20, footerY - 10);
-  
+
   doc.setFontSize(8);
   doc.setTextColor(150, 150, 150);
   doc.setFont('helvetica', 'italic');
@@ -277,13 +277,13 @@ function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: number
 
   if (data.needsInstallation) {
     doc.setFont('helvetica', 'normal');
-    doc.text('✓ Serviço de Instalação', 25, currentY);
+    doc.text('[X] Servico de Instalacao', 25, currentY);
     currentY += 6;
   }
 
   if (data.needsProject) {
     doc.setFont('helvetica', 'normal');
-    doc.text('✓ Projeto', 25, currentY);
+    doc.text('[X] Projeto', 25, currentY);
     currentY += 6;
   }
 
@@ -592,13 +592,13 @@ function addResidentialData(doc: jsPDF, data: any, yPosition: number, pageWidth:
 
   if (data.needsInstallation) {
     doc.setFont('helvetica', 'normal');
-    doc.text('✓ Serviço de Instalação', 25, currentY);
+    doc.text('[X] Servico de Instalacao', 25, currentY);
     currentY += 6;
   }
 
   if (data.needsProject) {
     doc.setFont('helvetica', 'normal');
-    doc.text('✓ Projeto', 25, currentY);
+    doc.text('[X] Projeto', 25, currentY);
     currentY += 6;
   }
 
