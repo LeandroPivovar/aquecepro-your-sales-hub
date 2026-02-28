@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Proposal } from '@/lib/api';
+import { api, Proposal, City } from '@/lib/api';
 
 interface PDFOptions {
   proposal: Proposal;
@@ -96,10 +96,20 @@ export async function generateProposalPDF({ proposal }: PDFOptions): Promise<voi
   doc.setTextColor(0, 0, 0);
   doc.setFont('helvetica', 'normal');
 
+  let cityData: City | undefined;
+  if (proposal.city) {
+    try {
+      cityData = await api.getCity(proposal.city);
+    } catch (error) {
+      console.warn('Erro ao carregar dados da cidade:', error);
+    }
+  }
+  const cityName = cityData ? cityData.name : (proposal.city || 'Não informada');
+
   const clientInfo = [
     ['Nome:', proposal.clientName || proposal.clientId || 'Não informado'],
     ['Telefone:', proposal.clientPhone || 'Não informado'],
-    ['Cidade:', proposal.city || 'Não informada'],
+    ['Cidade:', cityName],
     ['Segmento:', proposal.segment === 'piscina' ? 'Piscina' : 'Residencial'],
   ];
 
@@ -115,7 +125,7 @@ export async function generateProposalPDF({ proposal }: PDFOptions): Promise<voi
 
   // ===== DADOS ESPECÍFICOS DO SEGMENTO =====
   if (proposal.segment === 'piscina') {
-    yPosition = addPoolData(doc, proposal.data, yPosition, pageWidth);
+    yPosition = addPoolData(doc, proposal.data, yPosition, pageWidth, cityData);
   } else if (proposal.segment === 'residencial') {
     yPosition = addResidentialData(doc, proposal.data, yPosition, pageWidth);
   }
@@ -142,7 +152,7 @@ export async function generateProposalPDF({ proposal }: PDFOptions): Promise<voi
   doc.save(fileName);
 }
 
-function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: number): number {
+function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: number, cityData?: City): number {
   const pageHeight = doc.internal.pageSize.getHeight();
   let currentY = yPosition;
 
@@ -164,6 +174,9 @@ function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: number
 
   const poolInfo: string[][] = [];
 
+  const hasSpa = data.poolAreas?.some((a: any) => a.isSpa) || false;
+  const hasPrainha = data.poolAreas?.some((a: any) => parseFloat(a.depth) > 0 && parseFloat(a.depth) <= 0.6) || false;
+
   if (data.months && Array.isArray(data.months) && data.months.length > 0) {
     poolInfo.push(['Meses de Utilização:', data.months.join(', ')]);
   }
@@ -180,14 +193,6 @@ function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: number
     poolInfo.push(['Área da Piscina:', `${data.poolSurfaceArea.toFixed(2)} m²`]);
   }
 
-  if (data.isEnclosed !== undefined) {
-    poolInfo.push(['Ambiente Fechado:', data.isEnclosed ? 'Sim' : 'Não']);
-  }
-
-  if (data.isSuspended !== undefined) {
-    poolInfo.push(['Piscina Suspensa:', data.isSuspended ? 'Sim' : 'Não']);
-  }
-
   poolInfo.forEach(([label, value]) => {
     if (currentY > pageHeight - 30) {
       doc.addPage();
@@ -200,85 +205,151 @@ function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: number
     currentY += 7;
   });
 
-  // Áreas da piscina
-  if (data.poolAreas && Array.isArray(data.poolAreas) && data.poolAreas.length > 0) {
-    currentY += 5;
-    if (currentY > pageHeight - 50) {
-      doc.addPage();
-      currentY = 20;
-    }
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('Áreas da Piscina:', 20, currentY);
-    currentY += 8;
-
-    const areasData = data.poolAreas.map((area: any, index: number) => [
-      `Área ${index + 1}`,
-      area.length ? `${area.length}m` : '-',
-      area.width ? `${area.width}m` : '-',
-      area.depth ? `${area.depth}m` : '-',
-    ]);
-
-    autoTable(doc, {
-      startY: currentY,
-      head: [['Área', 'Comprimento', 'Largura', 'Profundidade']],
-      body: areasData,
-      theme: 'striped',
-      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-      styles: { fontSize: 9 },
-      margin: { left: 20, right: 20 },
-    });
-
-    currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 10;
-  }
-
-  // Serviços adicionais
-  if (data.additionalServices) {
-    currentY += 5;
-    if (currentY > pageHeight - 40) {
-      doc.addPage();
-      currentY = 20;
-    }
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('Serviços Adicionais:', 20, currentY);
-    currentY += 8;
-
-    const services = [];
-    if (data.additionalServices.filtrationSystem) services.push('Sistema de Filtração');
-    if (data.additionalServices.lighting) services.push('Iluminação');
-    if (data.additionalServices.ozone) services.push('Ozônio');
-    if (data.additionalServices.chlorineGenerator) services.push('Gerador de Cloro');
-    if (data.additionalServices.waterfall) services.push('Cascata');
-
-    if (services.length > 0) {
-      services.forEach((service) => {
-        doc.setFont('helvetica', 'normal');
-        doc.text(`• ${service}`, 25, currentY);
-        currentY += 6;
-      });
-    } else {
-      doc.setFont('helvetica', 'normal');
-      doc.text('Nenhum serviço adicional selecionado', 25, currentY);
-      currentY += 6;
-    }
-  }
-
-  // Serviços de instalação e projeto
+  // Características em tags visuais
   currentY += 5;
-  if (currentY > pageHeight - 30) {
-    doc.addPage();
-    currentY = 20;
+  const tags = [];
+  if (hasSpa) tags.push('C/ spa integrado');
+  if (hasPrainha) tags.push('C/ prainha');
+  if (data.waterfall) tags.push('C/ cascata'); else tags.push('S/ cascata');
+  if (data.infinityEdge) tags.push('C/ borda infinita'); else tags.push('S/ borda infinita');
+  tags.push(data.isEnclosed ? 'Piscina em local fechado' : 'Piscina em local aberto');
+  tags.push(data.isSuspended ? 'Piscina suspensa' : 'Piscina enterrada');
+
+  tags.forEach(tag => {
+    if (currentY > pageHeight - 20) { doc.addPage(); currentY = 20; }
+    doc.setFont('helvetica', 'normal');
+    doc.text(`• ${tag}`, 20, currentY);
+    currentY += 6;
+  });
+
+  currentY += 10;
+
+  // Calculos Térmicos
+  let minTemp = 20;
+  let maxWindSpeed = 10;
+  let windFactor = data.isEnclosed ? 1.0 : 1.15; // padrão
+
+  if (cityData && data.months?.length > 0) {
+    const selectedMonthsData = cityData.monthlyData.filter(m => data.months.includes(m.month));
+    if (selectedMonthsData.length > 0) {
+      minTemp = Math.min(...selectedMonthsData.map(m => m.temperature));
+      maxWindSpeed = Math.max(...selectedMonthsData.map(m => m.windSpeed));
+
+      if (!data.isEnclosed) {
+        if (maxWindSpeed < 19) windFactor = 1.15;
+        else if (maxWindSpeed < 36) windFactor = 1.25;
+        else windFactor = 1.8;
+      }
+    }
   }
+
+  let volumeFunda = 0;
+  let areaRasa = 0;
+
+  if (data.poolAreas && Array.isArray(data.poolAreas)) {
+    data.poolAreas.forEach((area: any) => {
+      const w = parseFloat(area.width) || 0;
+      const l = parseFloat(area.length) || 0;
+      const d = parseFloat(area.depth) || 0;
+      if (d > 0.6) {
+        volumeFunda += (w * l * d * 1000);
+      } else if (d > 0) {
+        areaRasa += (w * l);
+      }
+    });
+  }
+
+  const volTotalLitros = volumeFunda > 0 ? volumeFunda : (areaRasa > 0 ? 0 : 14000); // fallback
+  const tempDesejada = parseFloat(data.desiredTemp || '32');
+  const deltaT = tempDesejada - minTemp;
+
+  // Q = m * c * deltaT * FP / 860
+  // P = Q / tempo (72h)
+  const qFunda = (volTotalLitros * 1 * Math.max(0, deltaT) * windFactor) / 860;
+  const pFunda = qFunda / 72;
+
+  // P = 0.06 * area * deltaT * FP
+  const pRasa = 0.06 * areaRasa * Math.max(0, deltaT) * windFactor;
+
+  const pTotal = pFunda + pRasa;
+
+  // Equipamento sugerido
+  const refPotenciaKw = 13.19;
+  const refConsumoKw = 1.88;
+  const numMaquinas = Math.max(1, Math.ceil(pTotal / refPotenciaKw));
+  const tempoEstimado = pTotal > 0 ? Math.round((pTotal * 72) / (refPotenciaKw * numMaquinas)) : 0;
+  const consumoEstimado = tempoEstimado * refConsumoKw * numMaquinas;
+  const consumoMes = 8 * 30 * refConsumoKw * numMaquinas; // 8h por dia
+
+  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CÁLCULOS E POTÊNCIA', 20, currentY);
+  currentY += 10;
+  doc.setFontSize(10);
+
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Menor temp. média para período: ${minTemp.toFixed(1)}°C`, 20, currentY); currentY += 6;
+  doc.text(`Velocidade máx. do vento: ${maxWindSpeed} km/h (FP: ${windFactor})`, 20, currentY); currentY += 6;
+  if (volTotalLitros > 0) { doc.text(`Volume Parte Funda: ~${volTotalLitros.toLocaleString('pt-BR')} litros -> Potência: ${pFunda.toFixed(2)} kW`, 20, currentY); currentY += 6; }
+  if (areaRasa > 0) { doc.text(`Área Parte Rasa/Prainha: ~${areaRasa.toFixed(2)} m² -> Potência: ${pRasa.toFixed(2)} kW`, 20, currentY); currentY += 6; }
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Serviços:', 20, currentY);
+  doc.text(`Potência Mínima Necessária: ${pTotal.toFixed(2)} kW`, 20, currentY);
+  currentY += 10;
+
+  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('EQUIPAMENTOS SELECIONADOS', 20, currentY);
   currentY += 8;
+  doc.setFontSize(10);
+
+  doc.setFont('helvetica', 'normal');
+  doc.text(`• ${numMaquinas}x Bomba de Calor Inverter`, 25, currentY); currentY += 6;
+  doc.text(`  (Capac. térmica: ${refPotenciaKw.toFixed(2)} kW, Consumo elétrico: ${refConsumoKw.toFixed(2)} kWh) `, 25, currentY); currentY += 6;
+  doc.text(`• ${numMaquinas}x Motobomba (vazão ref. 4,5 m³/h com pré filtro)`, 25, currentY); currentY += 8;
+
+  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('ESTIMATIVA DE AQUECIMENTO E CONSUMO', 20, currentY);
+  currentY += 10;
+  doc.setFontSize(10);
+
+  autoTable(doc, {
+    startY: currentY,
+    head: [['Elevação Temp.', 'Capac. Aquecimento', 'Tempo Estimado', 'Consumo 1º Aq.']],
+    body: [
+      [`${minTemp.toFixed(1)}°C - ${tempDesejada}°C`, `${(refPotenciaKw * numMaquinas).toFixed(2)} kW`, `~${tempoEstimado} horas`, `~${consumoEstimado.toFixed(0)} kWh`]
+    ],
+    theme: 'striped',
+    headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+    styles: { fontSize: 9 },
+    margin: { left: 20, right: 20 },
+  });
+  currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 10;
+
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Consumo Mensal Estimado: ~${consumoMes.toFixed(0)} kWh/mês (considerando 8 horas/dia)`, 20, currentY);
+  currentY += 15;
+
+  // Serviços de instalação e projeto e valores
+  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
+
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('SERVIÇOS', 20, currentY);
+  currentY += 8;
+  doc.setFontSize(10);
 
   if (data.needsInstallation) {
     doc.setFont('helvetica', 'normal');
-    doc.text('[X] Servico de Instalacao', 25, currentY);
+    doc.text('[X] Instalação do sistema de aquecimento de piscina', 25, currentY);
     currentY += 6;
+    doc.text('    Instalação dos equipamentos bomba de calor e motobomba.', 25, currentY); currentY += 6;
+    doc.text('    Incluso materiais (conexões, tubos, registros, quadros elétricos).', 25, currentY);
+    currentY += 8;
   }
 
   if (data.needsProject) {
@@ -287,7 +358,38 @@ function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: number
     currentY += 6;
   }
 
-  return currentY;
+  currentY += 10;
+  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
+
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('INVESTIMENTO E CONDIÇÕES', 20, currentY);
+  currentY += 8;
+  doc.setFontSize(10);
+
+  // Valor simulado baseado nos equipamentos (exemplo)
+  const valorMaquinas = numMaquinas * 20000;
+  const valorServicos = (data.needsInstallation ? 2000 : 0) + (data.needsProject ? 1000 : 0);
+  const valorTotal = valorMaquinas + valorServicos;
+
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Valor total: R$ ${valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 20, currentY); currentY += 8;
+
+  doc.setFont('helvetica', 'normal');
+  doc.text('Pagamento pix/boleto', 20, currentY); currentY += 6;
+  doc.text(`Ou 12x R$ ${(valorTotal / 10).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} no cartão de crédito.`, 20, currentY); currentY += 10;
+
+  doc.text('Prazo de entrega: 30 dias (sujeito a disponibilidade)', 20, currentY); currentY += 6;
+
+  const validade = new Date();
+  validade.setDate(validade.getDate() + 15);
+  doc.text(`Proposta válida até ${validade.toLocaleDateString('pt-BR')}.`, 20, currentY); currentY += 10;
+
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8);
+  doc.text('*Não incluso no valor a infraestrutura, como impermeabilizações, barrilhetes de água, distribuição elétrica...', 20, currentY);
+
+  return currentY + 10;
 }
 
 function addResidentialData(doc: jsPDF, data: any, yPosition: number, pageWidth: number): number {
