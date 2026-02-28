@@ -10,61 +10,11 @@ export async function generateProposalPDF({ proposal }: PDFOptions): Promise<voi
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  let yPosition = 20;
+  let yPosition = 45; // Espaço para o header global nas páginas
 
   // Cores da marca
-  const primaryColor = [41, 128, 185]; // Azul
-  const secondaryColor = [52, 73, 94]; // Cinza escuro
-
-  // ===== CABEÇALHO COM LOGO CENTRALIZADO =====
-  let logoAdded = false;
-  try {
-    // Tentar carregar o logo usando import dinâmico
-    const logoModule = await import('@/assets/aquecepro-logo.png');
-    const logoUrl = logoModule.default;
-
-    if (logoUrl && typeof logoUrl === 'string') {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-
-      await new Promise<void>((resolve) => {
-        const timeout = setTimeout(() => {
-          resolve();
-        }, 2000); // Timeout de 2 segundos
-
-        img.onload = () => {
-          try {
-            const logoWidth = 80;
-            const logoHeight = (img.height * logoWidth) / img.width;
-            // Centralizar o logo horizontalmente
-            const logoX = (pageWidth - logoWidth) / 2;
-            doc.addImage(img, 'PNG', logoX, yPosition, logoWidth, logoHeight);
-            logoAdded = true;
-            yPosition += logoHeight + 10;
-          } catch (error) {
-            console.warn('Erro ao adicionar logo:', error);
-          }
-          clearTimeout(timeout);
-          resolve();
-        };
-        img.onerror = () => {
-          clearTimeout(timeout);
-          resolve();
-        };
-        img.src = logoUrl;
-      });
-    }
-  } catch (error) {
-    console.warn('Erro ao carregar logo:', error);
-    // Continuar sem o logo se houver erro
-  }
-
-  // Ajustar posição se o logo não foi adicionado
-  if (!logoAdded) {
-    yPosition = 30;
-  } else {
-    yPosition += 5;
-  }
+  const primaryColor: [number, number, number] = [41, 128, 185]; // Azul
+  const secondaryColor: [number, number, number] = [52, 73, 94]; // Cinza escuro
 
   // Linha separadora
   doc.setDrawColor(...primaryColor);
@@ -147,6 +97,39 @@ export async function generateProposalPDF({ proposal }: PDFOptions): Promise<voi
 
   doc.text('AquecePro - Soluções em Aquecimento', pageWidth / 2, footerY + 5, { align: 'center' });
 
+  // ===== INSERIR HEADER EM TODAS AS PÁGINAS =====
+  try {
+    const headerModule = await import('@/assets/header.png');
+    const headerUrl = headerModule.default;
+    if (headerUrl && typeof headerUrl === 'string') {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(resolve, 3000);
+        img.onload = () => {
+          const imgWidth = pageWidth;
+          const imgHeight = (img.height * imgWidth) / img.width;
+
+          const pageCount = doc.internal.getNumberOfPages();
+          for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.addImage(img, 'PNG', 0, 0, imgWidth, imgHeight);
+          }
+          clearTimeout(timeout);
+          resolve();
+        };
+        img.onerror = () => {
+          clearTimeout(timeout);
+          resolve();
+        };
+        img.src = headerUrl;
+      });
+    }
+  } catch (error) {
+    console.warn('Erro ao inserir header:', error);
+  }
+
   // Salvar o PDF
   const fileName = `Proposta_${proposal.id.substring(0, 8)}_${new Date().toISOString().split('T')[0]}.pdf`;
   doc.save(fileName);
@@ -159,7 +142,7 @@ async function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: 
   // Verificar se precisa de nova página
   if (currentY > pageHeight - 80) {
     doc.addPage();
-    currentY = 20;
+    currentY = 45;
   }
 
   doc.setFontSize(14);
@@ -196,7 +179,7 @@ async function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: 
   poolInfo.forEach(([label, value]) => {
     if (currentY > pageHeight - 30) {
       doc.addPage();
-      currentY = 20;
+      currentY = 45;
     }
     doc.setFont('helvetica', 'bold');
     doc.text(label, 20, currentY);
@@ -216,7 +199,7 @@ async function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: 
   tags.push(data.isSuspended ? 'Piscina suspensa' : 'Piscina enterrada');
 
   tags.forEach(tag => {
-    if (currentY > pageHeight - 20) { doc.addPage(); currentY = 20; }
+    if (currentY > pageHeight - 20) { doc.addPage(); currentY = 45; }
     doc.setFont('helvetica', 'normal');
     doc.text(`• ${tag}`, 20, currentY);
     currentY += 6;
@@ -288,7 +271,7 @@ async function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: 
 
   // DADOS CLIMÁTICOS (com gráfico)
   if (cityData && cityData.monthlyData && cityData.monthlyData.length > 0) {
-    if (currentY > pageHeight - 120) { doc.addPage(); currentY = 20; }
+    if (currentY > pageHeight - 120) { doc.addPage(); currentY = 45; }
 
     doc.setFontSize(14);
     doc.setTextColor(52, 73, 94);
@@ -362,7 +345,7 @@ async function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: 
   }
 
   // ============== DIMENSIONAMENTO ==============
-  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
+  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 45; }
   doc.setFontSize(14);
   doc.setTextColor(52, 73, 94);
   doc.setFont('helvetica', 'bold');
@@ -399,7 +382,7 @@ Para piscinas em ambiente aberto o fator vento precisa ser considerado, quanto m
 
   // ===== CARGA TÉRMICA - Parte funda =====
   if (volumeFunda > 0) {
-    if (currentY > pageHeight - 80) { doc.addPage(); currentY = 20; }
+    if (currentY > pageHeight - 80) { doc.addPage(); currentY = 45; }
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.text('CARGA TÉRMICA - Parte funda', 20, currentY); currentY += 6;
@@ -421,7 +404,7 @@ Para piscinas em ambiente aberto o fator vento precisa ser considerado, quanto m
     });
 
     currentY += 5;
-    if (currentY > pageHeight - 50) { doc.addPage(); currentY = 20; }
+    if (currentY > pageHeight - 50) { doc.addPage(); currentY = 45; }
 
     doc.setFont('helvetica', 'bold');
     doc.text('Cálculo energia térmica – Considerando volume', 20, currentY); currentY += 5;
@@ -445,14 +428,14 @@ Para piscinas em ambiente aberto o fator vento precisa ser considerado, quanto m
       headStyles: { fillColor: [41, 128, 185], textColor: 255 },
       styles: { fontSize: 9, cellPadding: 3 },
       columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 90 }, 2: { cellWidth: 40 } },
-      margin: { left: 20 },
+      margin: { left: 20, top: 45 },
     });
     currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 10;
   }
 
   // ===== CARGA TÉRMICA - Parte rasa =====
   if (areaRasa > 0) {
-    if (currentY > pageHeight - 80) { doc.addPage(); currentY = 20; }
+    if (currentY > pageHeight - 80) { doc.addPage(); currentY = 45; }
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.text('CARGA TÉRMICA – Parte rasa', 20, currentY); currentY += 6;
@@ -472,7 +455,7 @@ Para piscinas em ambiente aberto o fator vento precisa ser considerado, quanto m
     });
 
     currentY += 5;
-    if (currentY > pageHeight - 50) { doc.addPage(); currentY = 20; }
+    if (currentY > pageHeight - 50) { doc.addPage(); currentY = 45; }
 
     doc.setFont('helvetica', 'bold');
     doc.text('Cálculo energia térmica – Considerando a área', 20, currentY); currentY += 5;
@@ -491,13 +474,13 @@ Para piscinas em ambiente aberto o fator vento precisa ser considerado, quanto m
       headStyles: { fillColor: [41, 128, 185], textColor: 255 },
       styles: { fontSize: 9, cellPadding: 3 },
       columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 90 }, 2: { cellWidth: 40 } },
-      margin: { left: 20 },
+      margin: { left: 20, top: 45 },
     });
     currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 10;
   }
 
   // ===== QUANTIDADE DE MÁQUINAS =====
-  if (currentY > pageHeight - 100) { doc.addPage(); currentY = 20; }
+  if (currentY > pageHeight - 100) { doc.addPage(); currentY = 45; }
   doc.setFontSize(14);
   doc.setTextColor(52, 73, 94);
   doc.setFont('helvetica', 'bold');
@@ -541,12 +524,12 @@ Para piscinas em ambiente aberto o fator vento precisa ser considerado, quanto m
     headStyles: { fillColor: [41, 128, 185], textColor: 255 },
     styles: { fontSize: 9, cellPadding: 3 },
     columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 90 }, 2: { cellWidth: 40 } },
-    margin: { left: 20 },
+    margin: { left: 20, top: 45 },
   });
   currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 10;
 
   // ===== ESTIMATIVA DE TEMPO E CONSUMO =====
-  if (currentY > pageHeight - 80) { doc.addPage(); currentY = 20; }
+  if (currentY > pageHeight - 80) { doc.addPage(); currentY = 45; }
   doc.setFontSize(14);
   doc.setTextColor(52, 73, 94);
   doc.setFont('helvetica', 'bold');
@@ -566,7 +549,7 @@ Para piscinas em ambiente aberto o fator vento precisa ser considerado, quanto m
     theme: 'grid',
     headStyles: { fillColor: [41, 128, 185], textColor: 255 },
     styles: { fontSize: 9, halign: 'center', valign: 'middle' },
-    margin: { left: 20, right: 20 },
+    margin: { left: 20, right: 20, top: 45 },
   });
   currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 5;
 
@@ -604,7 +587,7 @@ Para piscinas em ambiente aberto o fator vento precisa ser considerado, quanto m
 
             if (currentY + imgHeight > pageHeight - 20) {
               doc.addPage();
-              currentY = 20;
+              currentY = 45;
             }
 
             doc.addImage(img, 'PNG', 20, currentY, imgWidth, imgHeight);
@@ -622,7 +605,7 @@ Para piscinas em ambiente aberto o fator vento precisa ser considerado, quanto m
   }
 
   // ===== RELAÇÃO DE EQUIPAMENTOS =====
-  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
+  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 45; }
   doc.setFontSize(14);
   doc.setTextColor(52, 73, 94);
   doc.setFont('helvetica', 'bold');
@@ -645,12 +628,12 @@ Para piscinas em ambiente aberto o fator vento precisa ser considerado, quanto m
     headStyles: { fillColor: [41, 128, 185], textColor: 255 },
     styles: { fontSize: 9, cellPadding: 3 },
     columnStyles: { 0: { cellWidth: 50 }, 1: { cellWidth: 120 } },
-    margin: { left: 20 },
+    margin: { left: 20, top: 45 },
   });
   currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 10;
 
   // ===== RELACAO DE SERVIÇOS =====
-  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
+  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 45; }
   doc.setFontSize(14);
   doc.setTextColor(52, 73, 94);
   doc.setFont('helvetica', 'bold');
@@ -682,7 +665,7 @@ Para piscinas em ambiente aberto o fator vento precisa ser considerado, quanto m
       headStyles: { fillColor: [41, 128, 185], textColor: 255 },
       styles: { fontSize: 9, cellPadding: 3 },
       columnStyles: { 0: { cellWidth: 60 }, 1: { cellWidth: 110 } },
-      margin: { left: 20 },
+      margin: { left: 20, top: 45 },
     });
     currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 10;
   }
@@ -711,7 +694,7 @@ function addResidentialData(doc: jsPDF, data: any, yPosition: number, pageWidth:
   // Verificar se precisa de nova página
   if (currentY > pageHeight - 80) {
     doc.addPage();
-    currentY = 20;
+    currentY = 45;
   }
 
   doc.setFontSize(14);
@@ -737,7 +720,7 @@ function addResidentialData(doc: jsPDF, data: any, yPosition: number, pageWidth:
   if (data.shower1 || data.shower2) {
     if (currentY > pageHeight - 60) {
       doc.addPage();
-      currentY = 20;
+      currentY = 45;
     }
 
     doc.setFont('helvetica', 'bold');
@@ -772,7 +755,7 @@ function addResidentialData(doc: jsPDF, data: any, yPosition: number, pageWidth:
         theme: 'striped',
         headStyles: { fillColor: [41, 128, 185], textColor: 255 },
         styles: { fontSize: 9 },
-        margin: { left: 20, right: 20 },
+        margin: { left: 20, right: 20, top: 45 },
       });
 
       currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 10;
@@ -815,7 +798,7 @@ function addResidentialData(doc: jsPDF, data: any, yPosition: number, pageWidth:
   if (consumptionPoints.length > 0) {
     if (currentY > pageHeight - 60) {
       doc.addPage();
-      currentY = 20;
+      currentY = 45;
     }
 
     doc.setFont('helvetica', 'bold');
@@ -839,7 +822,7 @@ function addResidentialData(doc: jsPDF, data: any, yPosition: number, pageWidth:
   if (data.maxSimultaneousFlow) {
     if (currentY > pageHeight - 30) {
       doc.addPage();
-      currentY = 20;
+      currentY = 45;
     }
 
     doc.setFont('helvetica', 'bold');
@@ -857,7 +840,7 @@ function addResidentialData(doc: jsPDF, data: any, yPosition: number, pageWidth:
   if (data.heatingTypes && Array.isArray(data.heatingTypes) && data.heatingTypes.length > 0) {
     if (currentY > pageHeight - 50) {
       doc.addPage();
-      currentY = 20;
+      currentY = 45;
     }
 
     doc.setFont('helvetica', 'bold');
@@ -875,7 +858,7 @@ function addResidentialData(doc: jsPDF, data: any, yPosition: number, pageWidth:
       currentY += 5;
       if (currentY > pageHeight - 40) {
         doc.addPage();
-        currentY = 20;
+        currentY = 45;
       }
 
       doc.setFont('helvetica', 'bold');
@@ -906,7 +889,7 @@ function addResidentialData(doc: jsPDF, data: any, yPosition: number, pageWidth:
       currentY += 5;
       if (currentY > pageHeight - 40) {
         doc.addPage();
-        currentY = 20;
+        currentY = 45;
       }
 
       doc.setFont('helvetica', 'bold');
@@ -941,7 +924,7 @@ function addResidentialData(doc: jsPDF, data: any, yPosition: number, pageWidth:
       currentY += 5;
       if (currentY > pageHeight - 40) {
         doc.addPage();
-        currentY = 20;
+        currentY = 45;
       }
 
       doc.setFont('helvetica', 'bold');
@@ -979,7 +962,7 @@ function addResidentialData(doc: jsPDF, data: any, yPosition: number, pageWidth:
     currentY += 5;
     if (currentY > pageHeight - 40) {
       doc.addPage();
-      currentY = 20;
+      currentY = 45;
     }
 
     doc.setFont('helvetica', 'bold');
@@ -997,7 +980,7 @@ function addResidentialData(doc: jsPDF, data: any, yPosition: number, pageWidth:
   currentY += 5;
   if (currentY > pageHeight - 30) {
     doc.addPage();
-    currentY = 20;
+    currentY = 45;
   }
 
   doc.setFont('helvetica', 'bold');
