@@ -581,6 +581,46 @@ Para piscinas em ambiente aberto o fator vento precisa ser considerado, quanto m
   doc.text('*Condições de ensaio: Temperatura do ambiente: 26°C / Umidade do ar: 80% /', 20, currentY); currentY += 4;
   doc.text('Temperatura de Entrada de água: 26°C / Temperatura de saída de água: 28°C', 20, currentY); currentY += 10;
 
+  // ===== INSERIR PRINTS DA PISCINA =====
+  try {
+    const prints = await Promise.all([
+      import('@/assets/print1.png'),
+      import('@/assets/print2.png'),
+      import('@/assets/print3.png'),
+      import('@/assets/print4.png')
+    ]);
+
+    for (const printModule of prints) {
+      const printUrl = printModule.default;
+      if (printUrl && typeof printUrl === 'string') {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(resolve, 3000); // 3 sec timeout
+          img.onload = () => {
+            const imgWidth = 170;
+            const imgHeight = (img.height * imgWidth) / img.width;
+
+            if (currentY + imgHeight > pageHeight - 20) {
+              doc.addPage();
+              currentY = 20;
+            }
+
+            doc.addImage(img, 'PNG', 20, currentY, imgWidth, imgHeight);
+            currentY += imgHeight + 10;
+            clearTimeout(timeout);
+            resolve();
+          };
+          img.onerror = () => { clearTimeout(timeout); resolve(); };
+          img.src = printUrl;
+        });
+      }
+    }
+  } catch (error) {
+    console.warn('Erro ao carregar prints da piscina:', error);
+  }
+
   // ===== RELAÇÃO DE EQUIPAMENTOS =====
   if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
   doc.setFontSize(14);
