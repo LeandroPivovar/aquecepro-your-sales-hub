@@ -125,7 +125,7 @@ export async function generateProposalPDF({ proposal }: PDFOptions): Promise<voi
 
   // ===== DADOS ESPECÍFICOS DO SEGMENTO =====
   if (proposal.segment === 'piscina') {
-    yPosition = addPoolData(doc, proposal.data, yPosition, pageWidth, cityData);
+    yPosition = await addPoolData(doc, proposal.data, yPosition, pageWidth, cityData);
   } else if (proposal.segment === 'residencial') {
     yPosition = addResidentialData(doc, proposal.data, yPosition, pageWidth);
   }
@@ -152,7 +152,7 @@ export async function generateProposalPDF({ proposal }: PDFOptions): Promise<voi
   doc.save(fileName);
 }
 
-function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: number, cityData?: City): number {
+async function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: number, cityData?: City): Promise<number> {
   const pageHeight = doc.internal.pageSize.getHeight();
   let currentY = yPosition;
 
@@ -224,6 +224,8 @@ function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: number
 
   currentY += 10;
 
+  currentY += 10;
+
   // Calculos Térmicos
   let minTemp = 20;
   let maxWindSpeed = 10;
@@ -263,6 +265,8 @@ function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: number
   const tempDesejada = parseFloat(data.desiredTemp || '32');
   const deltaT = tempDesejada - minTemp;
 
+  const tempInicial = minTemp; // temperatura inicial média mais baixa do período
+
   // Q = m * c * deltaT * FP / 860
   // P = Q / tempo (72h)
   const qFunda = (volTotalLitros * 1 * Math.max(0, deltaT) * windFactor) / 860;
@@ -274,111 +278,379 @@ function addPoolData(doc: jsPDF, data: any, yPosition: number, pageWidth: number
   const pTotal = pFunda + pRasa;
 
   // Equipamento sugerido
-  const refPotenciaKw = 13.19;
+  const refPotenciaKw = 13.19; // ~ 13,188 kW
   const refConsumoKw = 1.88;
+  const copNumber = 7.01;
   const numMaquinas = Math.max(1, Math.ceil(pTotal / refPotenciaKw));
   const tempoEstimado = pTotal > 0 ? Math.round((pTotal * 72) / (refPotenciaKw * numMaquinas)) : 0;
   const consumoEstimado = tempoEstimado * refConsumoKw * numMaquinas;
   const consumoMes = 8 * 30 * refConsumoKw * numMaquinas; // 8h por dia
 
+  // DADOS CLIMÁTICOS (com gráfico)
+  if (cityData && cityData.monthlyData && cityData.monthlyData.length > 0) {
+    if (currentY > pageHeight - 120) { doc.addPage(); currentY = 20; }
+
+    doc.setFontSize(14);
+    doc.setTextColor(52, 73, 94);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DADOS CLIMÁTICOS DA CIDADE', 20, currentY);
+    currentY += 8;
+
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Cidade selecionada: ${cityData.name} - Temperatura média mensal e ventos.`, 20, currentY);
+    currentY += 6;
+
+    // Tabela mensal
+    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    // const monthsBr = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+    const sortedData = [...cityData.monthlyData].sort((a, b) => {
+      return months.indexOf(a.month) - months.indexOf(b.month);
+    });
+
+    const labels = sortedData.map(m => {
+      const idx = months.indexOf(m.month);
+      return idx >= 0 ? ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][idx] : m.month;
+    });
+    const dataTemp = sortedData.map(m => m.temperature);
+    // const dataWind = sortedData.map(m => m.windSpeed);
+
+    const chartConfig = {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Temperatura Média Inicial (°C)',
+          data: dataTemp,
+          backgroundColor: 'rgba(41, 128, 185, 0.7)',
+          borderColor: 'rgba(41, 128, 185, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        plugins: {
+          datalabels: { display: true, align: 'end', anchor: 'end' },
+          legend: { display: true }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    };
+
+    const chartUrl = `https://quickchart.io/chart?w=500&h=250&c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
+
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(resolve, 3000); // 3 sec timeout
+        img.onload = () => {
+          doc.addImage(img, 'PNG', 20, currentY, 170, 85);
+          currentY += 95;
+          clearTimeout(timeout);
+          resolve();
+        };
+        img.onerror = () => { clearTimeout(timeout); resolve(); };
+        img.src = chartUrl;
+      });
+    } catch (e) {
+      console.warn('Erro ao carregar grafico', e);
+    }
+  }
+
+  // ============== DIMENSIONAMENTO ==============
   if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
   doc.setFontSize(14);
+  doc.setTextColor(52, 73, 94);
   doc.setFont('helvetica', 'bold');
-  doc.text('CÁLCULOS E POTÊNCIA', 20, currentY);
-  currentY += 10;
-  doc.setFontSize(10);
-
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Menor temp. média para período: ${minTemp.toFixed(1)}°C`, 20, currentY); currentY += 6;
-  doc.text(`Velocidade máx. do vento: ${maxWindSpeed} km/h (FP: ${windFactor})`, 20, currentY); currentY += 6;
-  if (volTotalLitros > 0) { doc.text(`Volume Parte Funda: ~${volTotalLitros.toLocaleString('pt-BR')} litros -> Potência: ${pFunda.toFixed(2)} kW`, 20, currentY); currentY += 6; }
-  if (areaRasa > 0) { doc.text(`Área Parte Rasa/Prainha: ~${areaRasa.toFixed(2)} m² -> Potência: ${pRasa.toFixed(2)} kW`, 20, currentY); currentY += 6; }
-
-  doc.setFont('helvetica', 'bold');
-  doc.text(`Potência Mínima Necessária: ${pTotal.toFixed(2)} kW`, 20, currentY);
-  currentY += 10;
-
-  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text('EQUIPAMENTOS SELECIONADOS', 20, currentY);
+  doc.text('DIMENSIONAMENTO', 20, currentY);
   currentY += 8;
+
   doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Considerações:', 20, currentY); currentY += 6;
 
   doc.setFont('helvetica', 'normal');
-  doc.text(`• ${numMaquinas}x Bomba de Calor Inverter`, 25, currentY); currentY += 6;
-  doc.text(`  (Capac. térmica: ${refPotenciaKw.toFixed(2)} kW, Consumo elétrico: ${refConsumoKw.toFixed(2)} kWh) `, 25, currentY); currentY += 6;
-  doc.text(`• ${numMaquinas}x Motobomba (vazão ref. 4,5 m³/h com pré filtro)`, 25, currentY); currentY += 8;
+  const considText = `A água mais quente se encontra na superfície, maior perca de energia ocorre na lâmina de água aparente, onde temos a troca térmica com o ambiente. Por esse motivo é utilizado cálculos diferentes para borda infinita e prainha, nesses espaços é considerado cálculo por área, e nos espaços onde a profundidade é superior a 60cm é considerado cálculo por volume.
+Para piscinas em ambiente aberto o fator vento precisa ser considerado, quanto maior a velocidade do vento, maior será a perda térmica para o ambiente, segue fator de perdas (FP):`;
+  const splitConsid = doc.splitTextToSize(considText, pageWidth - 40);
+  doc.text(splitConsid, 20, currentY);
+  currentY += (splitConsid.length * 5) + 5;
 
-  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text('ESTIMATIVA DE AQUECIMENTO E CONSUMO', 20, currentY);
-  currentY += 10;
-  doc.setFontSize(10);
-
+  // Tabela FP
   autoTable(doc, {
     startY: currentY,
-    head: [['Elevação Temp.', 'Capac. Aquecimento', 'Tempo Estimado', 'Consumo 1º Aq.']],
+    head: [['Tipo do vento', 'Velocidade (km/h)', 'Fator de correção (FP)']],
     body: [
-      [`${minTemp.toFixed(1)}°C - ${tempDesejada}°C`, `${(refPotenciaKw * numMaquinas).toFixed(2)} kW`, `~${tempoEstimado} horas`, `~${consumoEstimado.toFixed(0)} kWh`]
+      ['Fraco', '7 - 18', '1,15'],
+      ['Moderado', '19 - 35', '1,25'],
+      ['Forte', '36 - 44', '1,8'],
     ],
-    theme: 'striped',
+    theme: 'grid',
     headStyles: { fillColor: [41, 128, 185], textColor: 255 },
     styles: { fontSize: 9 },
     margin: { left: 20, right: 20 },
   });
   currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 10;
 
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Consumo Mensal Estimado: ~${consumoMes.toFixed(0)} kWh/mês (considerando 8 horas/dia)`, 20, currentY);
-  currentY += 15;
+  // ===== CARGA TÉRMICA - Parte funda =====
+  if (volumeFunda > 0) {
+    if (currentY > pageHeight - 80) { doc.addPage(); currentY = 20; }
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CARGA TÉRMICA - Parte funda', 20, currentY); currentY += 6;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Volume: ~${volTotalLitros.toLocaleString('pt-BR')} litros`, 20, currentY); currentY += 6;
 
-  // Serviços de instalação e projeto e valores
-  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
+    const legendFunda = [
+      'Q = Energia térmica (kW)',
+      'P = Potência necessária (kW)',
+      'm = Quantidade de massa (kg)',
+      'c = Calor específico da água (1 cal/kg .°C)',
+      'ΔT = Tpiscina − Tinicial (temperatura final - temperatura inicial média mais baixa do período)',
+      'Fp = Perdas térmicas relacionadas a velocidade do vento',
+      'Tempo = Tempo de aquecimento (horas)'
+    ];
+    legendFunda.forEach(item => {
+      doc.text(item, 20, currentY); currentY += 5;
+    });
 
+    currentY += 5;
+    if (currentY > pageHeight - 50) { doc.addPage(); currentY = 20; }
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Cálculo energia térmica – Considerando volume', 20, currentY); currentY += 5;
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['ETAPAS', 'MEMORIAL DE CÁLCULO', 'VOLUME']],
+      body: [
+        [
+          'Quantidade de\nenergia (kW)',
+          `Q = [m × c × ΔT × Fp] / 860\nQ = [${volTotalLitros.toLocaleString('pt-BR')} × 1 × (${tempDesejada} - ${tempInicial.toFixed(1)}) × ${windFactor}] / 860`,
+          `${qFunda.toFixed(2)} kW`
+        ],
+        [
+          'Potência necessária\n(kW)',
+          `P = Q / Tempo\nP = ${qFunda.toFixed(2)} / 72`,
+          `${pFunda.toFixed(2)} kW`
+        ]
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 90 }, 2: { cellWidth: 40 } },
+      margin: { left: 20 },
+    });
+    currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 10;
+  }
+
+  // ===== CARGA TÉRMICA - Parte rasa =====
+  if (areaRasa > 0) {
+    if (currentY > pageHeight - 80) { doc.addPage(); currentY = 20; }
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CARGA TÉRMICA – Parte rasa', 20, currentY); currentY += 6;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Medidas: ~${areaRasa.toFixed(2).replace('.', ',')}m²`, 20, currentY); currentY += 6;
+
+    const legendRasa = [
+      'P = Potência necessária (kW)',
+      '0,06 = Constante',
+      'área = área da piscina m² (C x L)',
+      'ΔT = Tpiscina − Tinicial (temperatura final - temperatura inicial, média mais baixa do período)',
+      'Fp = Perdas térmicas relacionadas a velocidade do vento'
+    ];
+    legendRasa.forEach(item => {
+      doc.text(item, 20, currentY); currentY += 5;
+    });
+
+    currentY += 5;
+    if (currentY > pageHeight - 50) { doc.addPage(); currentY = 20; }
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Cálculo energia térmica – Considerando a área', 20, currentY); currentY += 5;
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['ETAPAS', 'MEMORIAL DE CÁLCULO', 'Potência']],
+      body: [
+        [
+          'Potência necessária\n(kW)',
+          `P = 0,06 × área × ΔT × Fp\nP = 0,06 × ${areaRasa.toFixed(2).replace('.', ',')} × (${tempDesejada} - ${tempInicial.toFixed(1).replace('.', ',')}) × ${windFactor.toString().replace('.', ',')}`,
+          `${pRasa.toFixed(2)} kW`
+        ]
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 90 }, 2: { cellWidth: 40 } },
+      margin: { left: 20 },
+    });
+    currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 10;
+  }
+
+  // ===== QUANTIDADE DE MÁQUINAS =====
+  if (currentY > pageHeight - 100) { doc.addPage(); currentY = 20; }
   doc.setFontSize(14);
+  doc.setTextColor(52, 73, 94);
   doc.setFont('helvetica', 'bold');
-  doc.text('SERVIÇOS', 20, currentY);
-  currentY += 8;
-  doc.setFontSize(10);
+  doc.text('QUANTIDADE DE MÁQUINAS', 20, currentY); currentY += 8;
 
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Máquina de referência capacidade de aquecimento: ~ ${refPotenciaKw.toFixed(2)} kW`, 20, currentY); currentY += 5;
+  doc.text(`Potência elétrica: ~ ${refConsumoKw.toFixed(2)} kW`, 20, currentY); currentY += 5;
+  doc.text(`COP: ~ ${copNumber}`, 20, currentY); currentY += 5;
+  doc.text(`h = Tempo de aquecimento previsto, estimativa ${tempoEstimado} horas`, 20, currentY); currentY += 5;
+  doc.text(`* Temperatura ambiente 26 °C`, 20, currentY); currentY += 8;
+
+  const memCalMaq = [
+    `PTotal = ${pFunda.toFixed(2)} + ${pRasa.toFixed(2)} = ${pTotal.toFixed(2)} kW`,
+    `N° = [ PTotal × 72 ÷ h ] ÷ ${refPotenciaKw.toFixed(2)}`,
+    `N° = [ ${pTotal.toFixed(2)} × 72 ÷ ${tempoEstimado} ] ÷ ${refPotenciaKw.toFixed(2)} = ${numMaquinas}`,
+  ];
+  memCalMaq.forEach(item => {
+    doc.text(item, 30, currentY); currentY += 5;
+  });
+  currentY += 5;
+
+  autoTable(doc, {
+    startY: currentY,
+    head: [['ETAPAS', 'MEMORIAL DE CÁLCULO', 'VOLUME']],
+    body: [
+      [
+        'Somatório das\npotencias (kW)',
+        `PTotal = ∑P`,
+        `${pTotal.toFixed(2)} kW`
+      ],
+      [
+        'Quantidade de\nmáquinas',
+        `N° = (PTotal × 72 ÷ h) / Capacidade de aquecimento\nN° = [${pTotal.toFixed(2)} × 72 ÷ ${tempoEstimado}] / ${refPotenciaKw.toFixed(2)}`,
+        `${numMaquinas.toFixed(1).replace('.', ',')}`
+      ]
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+    styles: { fontSize: 9, cellPadding: 3 },
+    columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 90 }, 2: { cellWidth: 40 } },
+    margin: { left: 20 },
+  });
+  currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 10;
+
+  // ===== ESTIMATIVA DE TEMPO E CONSUMO =====
+  if (currentY > pageHeight - 80) { doc.addPage(); currentY = 20; }
+  doc.setFontSize(14);
+  doc.setTextColor(52, 73, 94);
+  doc.setFont('helvetica', 'bold');
+  doc.text('ESTIMATIVA DE TEMPO P/ AQUECIMENTO E CONSUMO', 20, currentY); currentY += 8;
+
+  autoTable(doc, {
+    startY: currentY,
+    head: [['Elevação\nTemperatura (°C)', 'Capacidade de\naquecimento\n* (kW)\n(01 unidade)', 'Tempo\nEstimado\n(horas)', 'Consumo\nelétrico\nestimado(kWh)']],
+    body: [
+      [
+        `${tempInicial.toFixed(1).replace('.', ',')} - ${tempDesejada}`,
+        `${refPotenciaKw.toFixed(2).replace('.', ',')}`,
+        `${tempoEstimado}`,
+        `${consumoEstimado.toFixed(0)}`
+      ]
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+    styles: { fontSize: 9, halign: 'center', valign: 'middle' },
+    margin: { left: 20, right: 20 },
+  });
+  currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 5;
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`~${consumoEstimado.toFixed(0)} kWh para o primeiro aquecimento totalizando ~${tempoEstimado} horas`, 20, currentY); currentY += 5;
+  doc.text(`~${(refConsumoKw * numMaquinas * 8).toFixed(0)} kW/dia considerando um funcionamento de 8 horas/dia`, 20, currentY); currentY += 5;
+  doc.text(`~${consumoMes.toFixed(0)} kW/mês considerando um funcionamento de 240 horas/mês`, 20, currentY); currentY += 8;
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'italic');
+  doc.text('*Condições de ensaio: Temperatura do ambiente: 26°C / Umidade do ar: 80% /', 20, currentY); currentY += 4;
+  doc.text('Temperatura de Entrada de água: 26°C / Temperatura de saída de água: 28°C', 20, currentY); currentY += 10;
+
+  // ===== RELAÇÃO DE EQUIPAMENTOS =====
+  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
+  doc.setFontSize(14);
+  doc.setTextColor(52, 73, 94);
+  doc.setFont('helvetica', 'bold');
+  doc.text('RELAÇÃO DE EQUIPAMENTOS – Sistema de aquecimento piscina', 20, currentY); currentY += 8;
+
+  autoTable(doc, {
+    startY: currentY,
+    head: [['Itens', 'Características']],
+    body: [
+      [
+        `${('0' + numMaquinas).slice(-2)} Bomba de calor`,
+        `Inverter\nCapacidade térmica de ${refPotenciaKw.toFixed(2)} kW\nConsumo elétrico ${refConsumoKw.toFixed(2)} kWh\nNível de ruido 60dB`
+      ],
+      [
+        `${('0' + numMaquinas).slice(-2)} Motobomba`,
+        `vazão de 4,5 m³/h\nC/ pré filtro`
+      ]
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+    styles: { fontSize: 9, cellPadding: 3 },
+    columnStyles: { 0: { cellWidth: 50 }, 1: { cellWidth: 120 } },
+    margin: { left: 20 },
+  });
+  currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 10;
+
+  // ===== RELACAO DE SERVIÇOS =====
+  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
+  doc.setFontSize(14);
+  doc.setTextColor(52, 73, 94);
+  doc.setFont('helvetica', 'bold');
+  doc.text('RELAÇÃO DE SERVIÇOS – Sistema de aquecimento piscina', 20, currentY); currentY += 8;
+
+  const servicosBody: string[][] = [];
   if (data.needsInstallation) {
-    doc.setFont('helvetica', 'normal');
-    doc.text('[X] Instalação do sistema de aquecimento de piscina', 25, currentY);
-    currentY += 6;
-    doc.text('    Instalação dos equipamentos bomba de calor e motobomba.', 25, currentY); currentY += 6;
-    doc.text('    Incluso materiais (conexões, tubos, registros, quadros elétricos).', 25, currentY);
-    currentY += 8;
+    servicosBody.push([
+      `01 Instalação sistema de aquecimento de\npiscina`,
+      `Instalação dos equipamentos\nbomba de calor\nIncluso os materiais para instalação como\nconexões e tubos, registros`
+    ]);
+    servicosBody.push([
+      `01 Instalação motobomba`,
+      `Instalação das motobomba do sistema de aquecimento de\nágua, incluso os materiais para instalação como conexões,\ntubos, registros, válvulas`
+    ]);
   }
 
-  if (data.needsProject) {
-    doc.setFont('helvetica', 'normal');
-    doc.text('[X] Projeto', 25, currentY);
-    currentY += 6;
+  servicosBody.push([
+    `01 Montagem\nquadro elétrico`,
+    `Montagem do quadro elétrico para o sistema de\naquecimento de água, incluso os materiais para instalação\ncomo disjuntores, DRs, DPS, cabos e tomadas e\nconfiguração`
+  ]);
+
+  if (servicosBody.length > 0) {
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Itens', 'Características']],
+      body: servicosBody,
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: { 0: { cellWidth: 60 }, 1: { cellWidth: 110 } },
+      margin: { left: 20 },
+    });
+    currentY = ((doc as any).lastAutoTable?.finalY || currentY) + 10;
   }
 
-  currentY += 10;
-  if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
-
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text('INVESTIMENTO E CONDIÇÕES', 20, currentY);
-  currentY += 8;
+  // Preços removidos conforme solicitado
   doc.setFontSize(10);
-
-  // Valor simulado baseado nos equipamentos (exemplo)
-  const valorMaquinas = numMaquinas * 20000;
-  const valorServicos = (data.needsInstallation ? 2000 : 0) + (data.needsProject ? 1000 : 0);
-  const valorTotal = valorMaquinas + valorServicos;
-
-  doc.setFont('helvetica', 'bold');
-  doc.text(`Valor total: R$ ${valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 20, currentY); currentY += 8;
-
+  doc.setTextColor(52, 73, 94);
   doc.setFont('helvetica', 'normal');
-  doc.text('Pagamento pix/boleto', 20, currentY); currentY += 6;
-  doc.text(`Ou 12x R$ ${(valorTotal / 10).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} no cartão de crédito.`, 20, currentY); currentY += 10;
-
   doc.text('Prazo de entrega: 30 dias (sujeito a disponibilidade)', 20, currentY); currentY += 6;
 
   const validade = new Date();
