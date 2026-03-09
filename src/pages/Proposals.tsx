@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { StatusBadge } from "@/components/common/StatusBadge";
-import { Plus, Search, MoreVertical, Download, Calendar, Edit, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Search, MoreVertical, Download, Calendar, Edit, Loader2, CheckCircle, XCircle, DollarSign } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { ProposalFormModal } from "@/components/modals/ProposalFormModal";
 import { AppointmentFormModal } from "@/components/modals/AppointmentFormModal";
+import { ProposalPaymentModal } from "@/components/modals/ProposalPaymentModal";
 import { api, Proposal, Appointment } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { generateProposalPDF } from "@/utils/generateProposalPDF";
@@ -38,6 +39,8 @@ export default function Proposals() {
   const [editingProposal, setEditingProposal] = useState<Proposal | null>(null);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [appointmentFromProposal, setAppointmentFromProposal] = useState<Partial<Pick<Appointment, 'clientId' | 'address'>> | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentProposal, setPaymentProposal] = useState<Proposal | null>(null);
   const queryClient = useQueryClient();
 
   const { data: proposals = [], isLoading, error } = useQuery<Proposal[]>({
@@ -101,7 +104,7 @@ export default function Proposals() {
           <p className="text-sm text-muted-foreground mb-4">
             {error instanceof Error ? error.message : 'Erro desconhecido'}
           </p>
-          <Button 
+          <Button
             onClick={() => queryClient.invalidateQueries({ queryKey: ['proposals'] })}
             variant="outline"
           >
@@ -119,8 +122,8 @@ export default function Proposals() {
           <h1 className="text-3xl font-bold text-foreground">Propostas</h1>
           <p className="text-muted-foreground">Gerencie todas as propostas comerciais</p>
         </div>
-        <Button 
-          className="gap-2" 
+        <Button
+          className="gap-2"
           onClick={() => {
             setEditingProposal(null);
             setIsModalOpen(true);
@@ -185,7 +188,7 @@ export default function Proposals() {
             ) : filteredProposals.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                  {proposals.length === 0 
+                  {proposals.length === 0
                     ? "Nenhuma proposta encontrada. Crie uma nova proposta para começar."
                     : "Nenhuma proposta encontrada com os filtros aplicados."}
                 </TableCell>
@@ -197,11 +200,10 @@ export default function Proposals() {
                     #{proposal.id.substring(0, 8)}
                   </TableCell>
                   <TableCell>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      proposal.segment === "piscina" 
-                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" 
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${proposal.segment === "piscina"
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
                         : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                    }`}>
+                      }`}>
                       {formatSegment(proposal.segment)}
                     </span>
                   </TableCell>
@@ -212,8 +214,9 @@ export default function Proposals() {
                     {proposal.city || "-"}
                   </TableCell>
                   <TableCell className="font-medium">
-                    {/* Valor pode ser calculado dos produtos selecionados */}
-                    -
+                    {proposal.data?.value
+                      ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(proposal.data.value)
+                      : "-"}
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={proposal.status as any} />
@@ -253,6 +256,24 @@ export default function Proposals() {
                         <DropdownMenuItem
                           onClick={async () => {
                             try {
+                              const fullProposal = await api.getProposal(proposal.id);
+                              setPaymentProposal(fullProposal);
+                              setIsPaymentModalOpen(true);
+                            } catch (error) {
+                              toast({
+                                title: 'Erro',
+                                description: error instanceof Error ? error.message : 'Erro ao carregar proposta',
+                                variant: 'destructive',
+                              });
+                            }
+                          }}
+                        >
+                          <DollarSign className="mr-2 h-4 w-4" />
+                          Editar Valor
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            try {
                               // Buscar a proposta completa se necessário
                               const fullProposal = await api.getProposal(proposal.id);
                               await generateProposalPDF({ proposal: fullProposal });
@@ -277,17 +298,17 @@ export default function Proposals() {
                             try {
                               // Buscar a proposta completa se necessário
                               const fullProposal = await api.getProposal(proposal.id);
-                              
+
                               // Preparar dados do agendamento baseado na proposta
                               const clientId = fullProposal.clientId;
                               const address = fullProposal.city || "Endereço não informado";
-                              
+
                               // Criar objeto de agendamento pré-preenchido
                               const appointmentData: Partial<Pick<Appointment, 'clientId' | 'address'>> = {
                                 clientId: clientId || undefined,
                                 address: address,
                               };
-                              
+
                               setAppointmentFromProposal(appointmentData);
                               setIsAppointmentModalOpen(true);
                             } catch (error) {
@@ -364,8 +385,8 @@ export default function Proposals() {
         </Table>
       </div>
 
-      <ProposalFormModal 
-        open={isModalOpen} 
+      <ProposalFormModal
+        open={isModalOpen}
         onOpenChange={(open) => {
           setIsModalOpen(open);
           if (!open) {
@@ -386,6 +407,17 @@ export default function Proposals() {
           }
         }}
         initialData={appointmentFromProposal || undefined}
+      />
+
+      <ProposalPaymentModal
+        open={isPaymentModalOpen}
+        onOpenChange={(open) => {
+          setIsPaymentModalOpen(open);
+          if (!open) {
+            setPaymentProposal(null);
+          }
+        }}
+        proposal={paymentProposal}
       />
     </div>
   );

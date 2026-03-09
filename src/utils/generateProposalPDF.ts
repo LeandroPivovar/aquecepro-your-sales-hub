@@ -80,6 +80,52 @@ export async function generateProposalPDF({ proposal }: PDFOptions): Promise<voi
     yPosition = addResidentialData(doc, proposal.data, yPosition, pageWidth);
   }
 
+  // ===== INVESTIMENTO E CONDIÇÕES DE PAGAMENTO =====
+  if (proposal.data?.value) {
+    if (yPosition > pageHeight - 60) {
+      doc.addPage();
+      yPosition = 45;
+    }
+
+    doc.setFontSize(14);
+    doc.setTextColor(...secondaryColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text('INVESTIMENTO E CONDIÇÕES DE PAGAMENTO', 20, yPosition);
+    yPosition += 8;
+
+    const formattedValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(proposal.data.value);
+
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Valor Total: ${formattedValue}`, 20, yPosition);
+    yPosition += 8;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+
+    const payment = proposal.data.paymentConditions;
+    if (payment && payment.allowsInstallments) {
+      let condText = `• Parcelamento em até ${payment.maxInstallments} vezes.`;
+      if (payment.hasInterest) {
+        if (payment.interestFreeInstallments > 0) {
+          condText += ` Sendo em até ${payment.interestFreeInstallments} vezes sem juros, demais parcelas com juros.`;
+        } else {
+          condText += ` Parcelamento com juros.`;
+        }
+      } else {
+        condText += ` Sem juros.`;
+      }
+      doc.text(condText, 20, yPosition);
+      yPosition += 6;
+    } else {
+      doc.text('• Pagamento à vista.', 20, yPosition);
+      yPosition += 6;
+    }
+
+    yPosition += 5;
+  }
+
   // ===== RODAPÉ =====
   const footerY = pageHeight - 20;
   doc.setDrawColor(200, 200, 200);
