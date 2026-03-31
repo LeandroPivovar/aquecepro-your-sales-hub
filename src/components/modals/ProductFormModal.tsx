@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { api, CreateProductRequest, Category } from "@/lib/api";
+import { api, CreateProductRequest, Category, Product } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import {
@@ -27,6 +27,7 @@ import { Separator } from "@/components/ui/separator";
 interface ProductFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  product?: Product | null;
 }
 
 // Campos de características por Categoria 2 (chave normalizada)
@@ -53,7 +54,8 @@ const categories2Fields: Record<string, string[]> = {
   projeto: [],
 };
 
-export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) {
+export function ProductFormModal({ open, onOpenChange, product }: ProductFormModalProps) {
+  const isEditing = !!product;
   // Informações Básicas
   const [segment, setSegment] = useState("");
   const [category1, setCategory1] = useState("");
@@ -83,6 +85,38 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
   // Valores Financeiros
   const [cost, setCost] = useState("");
   const [saleValue, setSaleValue] = useState("");
+
+  useEffect(() => {
+    if (product && open) {
+      setSegment(product.segment);
+      setCategory1(product.category1);
+      setCategory2(product.category2);
+      setCode(product.code);
+      setDescription(product.description);
+      setProposalDescription(product.proposalDescription);
+      setCost(product.cost.toString());
+      setSaleValue(product.saleValue.toString());
+
+      if (product.technicalSpecs) {
+        setThermalCapacity26(product.technicalSpecs.thermalCapacity26?.toString() || "");
+        setThermalCapacity15(product.technicalSpecs.thermalCapacity15?.toString() || "");
+        setElectricConsumption26(product.technicalSpecs.electricConsumption26?.toString() || "");
+        setElectricConsumption15(product.technicalSpecs.electricConsumption15?.toString() || "");
+        setIdealFlowRate(product.technicalSpecs.idealFlowRate?.toString() || "");
+        setVolume(product.technicalSpecs.volume?.toString() || "");
+        setResistancePower(product.technicalSpecs.resistancePower?.toString() || "");
+        setCollectorArea(product.technicalSpecs.collectorArea?.toString() || "");
+        setCollectorProduction(product.technicalSpecs.collectorProduction?.toString() || "");
+        setNominalPower(product.technicalSpecs.nominalPower?.toString() || "");
+        setHeaterEfficiency(product.technicalSpecs.heaterEfficiency?.toString() || "");
+        setGasType(product.technicalSpecs.gasType || "");
+        setFlowAt15mca(product.technicalSpecs.flowAt15mca?.toString() || "");
+        setSimultaneousFlow20C(product.technicalSpecs.simultaneousFlow20C?.toString() || "");
+      }
+    } else if (!open) {
+      resetForm();
+    }
+  }, [product, open]);
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ['categories'],
@@ -146,8 +180,26 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
         description: 'Produto criado com sucesso',
       });
       onOpenChange(false);
-      // Resetar formulário
       resetForm();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: Partial<CreateProductRequest>) => api.updateProduct(product!.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({
+        title: 'Sucesso!',
+        description: 'Produto atualizado com sucesso',
+      });
+      onOpenChange(false);
     },
     onError: (error: Error) => {
       toast({
@@ -256,16 +308,22 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
       saleValue: parseFloat(saleValue),
     };
 
-    createMutation.mutate(productData);
+    if (isEditing) {
+      updateMutation.mutate(productData);
+    } else {
+      createMutation.mutate(productData);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Novo Produto</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
           <DialogDescription>
-            Cadastre um novo produto com todas as informações técnicas e comerciais
+            {isEditing 
+              ? 'Atualize as informações do produto'
+              : 'Cadastre um novo produto com todas as informações técnicas e comerciais'}
           </DialogDescription>
         </DialogHeader>
 
@@ -610,17 +668,17 @@ export function ProductFormModal({ open, onOpenChange }: ProductFormModalProps) 
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={createMutation.isPending}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={createMutation.isPending || updateMutation.isPending}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={createMutation.isPending}>
-            {createMutation.isPending ? (
+          <Button onClick={handleSubmit} disabled={createMutation.isPending || updateMutation.isPending}>
+            {createMutation.isPending || updateMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Cadastrando...
+                {isEditing ? 'Salvando...' : 'Cadastrando...'}
               </>
             ) : (
-              'Cadastrar Produto'
+              isEditing ? 'Salvar Alterações' : 'Cadastrar Produto'
             )}
           </Button>
         </DialogFooter>

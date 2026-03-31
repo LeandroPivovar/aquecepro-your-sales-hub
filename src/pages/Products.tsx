@@ -18,6 +18,7 @@ import { toast } from "@/hooks/use-toast";
 
 export default function Products() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -73,6 +74,11 @@ export default function Products() {
       style: 'currency',
       currency: 'BRL',
     }).format(value);
+  };
+
+  const handleEdit = (product: Product) => {
+    setSelectedProduct(product);
+    setIsModalOpen(true);
   };
 
   const handleDelete = (id: string) => {
@@ -202,7 +208,11 @@ export default function Products() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleEdit(product)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
@@ -228,9 +238,11 @@ export default function Products() {
 
       <ProductFormModal
         open={isModalOpen}
+        product={selectedProduct}
         onOpenChange={(open) => {
           setIsModalOpen(open);
           if (!open) {
+            setSelectedProduct(null);
             queryClient.invalidateQueries({ queryKey: ['products'] });
           }
         }}
